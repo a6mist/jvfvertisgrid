@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useConnect, useAccount, useDisconnect } from 'wagmi';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/Dialog';
 import { Wallet, Copy, LogOut, Check, AlertTriangle } from 'lucide-react';
@@ -10,7 +10,7 @@ interface WalletModalProps {
 }
 
 const walletInfo = {
-  metaMask: {
+  metamask: {
     name: 'MetaMask',
     icon: '🦊',
     description: 'Browser extension & mobile',
@@ -27,20 +27,77 @@ const walletInfo = {
   },
 };
 
+type WalletInfo = {
+  name: string;
+  icon: string;
+  description: string;
+};
+
+type MappedConnector = {
+  key: string;
+  connector: ReturnType<typeof useConnect>['connectors'][number];
+  info: WalletInfo;
+};
+
+const getConnectorKey = (id: string, name: string) => {
+  const normalized = `${id} ${name}`.toLowerCase();
+
+  if (normalized.includes('meta') || normalized.includes('injected')) return 'metamask';
+  if (normalized.includes('walletconnect')) return 'walletConnect';
+  if (normalized.includes('coinbase')) return 'coinbaseWallet';
+
+  return `${id}:${name}`;
+};
+
+const getConnectorInfo = (key: string, connectorName: string): WalletInfo => {
+  const mapped = walletInfo[key as keyof typeof walletInfo];
+  if (mapped) return mapped;
+
+  return {
+    name: connectorName,
+    icon: '💼',
+    description: 'Crypto wallet',
+  };
+};
+
 export const WalletModal = ({ isOpen, onClose }: WalletModalProps) => {
-  const { connectors, connect, isPending } = useConnect();
+  const { connectors, connectAsync, isPending } = useConnect();
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
   const [copied, setCopied] = useState(false);
+  const [activeConnectorKey, setActiveConnectorKey] = useState<string | null>(null);
 
-  const handleConnect = async (connector: any) => {
+  const uniqueConnectors = useMemo<MappedConnector[]>(() => {
+    const seen = new Set<string>();
+    const unique: MappedConnector[] = [];
+
+    connectors.forEach((connector) => {
+      const key = getConnectorKey(connector.id, connector.name);
+      if (seen.has(key)) return;
+      seen.add(key);
+
+      unique.push({
+        key,
+        connector,
+        info: getConnectorInfo(key, connector.name),
+      });
+    });
+
+    return unique;
+  }, [connectors]);
+
+  const handleConnect = async (mapped: MappedConnector) => {
+    setActiveConnectorKey(mapped.key);
     try {
-      await connect({ connector });
+      await connectAsync({ connector: mapped.connector });
       toast.success('Wallet connected successfully!');
       onClose();
     } catch (error) {
       console.error('Connection failed:', error);
-      toast.error('Failed to connect wallet');
+      const message = error instanceof Error ? error.message : 'Failed to connect wallet';
+      toast.error(message);
+    } finally {
+      setActiveConnectorKey(null);
     }
   };
 
@@ -131,27 +188,22 @@ export const WalletModal = ({ isOpen, onClose }: WalletModalProps) => {
               </div>
             </div>
 
-            {connectors.map((connector) => {
-              const info = walletInfo[connector.id as keyof typeof walletInfo] || {
-                name: connector.name,
-                icon: '💼',
-                description: 'Crypto wallet',
-              };
-
+            {uniqueConnectors.map((item) => {
+              const isThisConnectorPending = isPending && activeConnectorKey === item.key;
               return (
                 <button
-                  key={connector.id}
-                  onClick={() => handleConnect(connector)}
+                  key={item.key}
+                  onClick={() => void handleConnect(item)}
                   disabled={isPending}
                   className="w-full p-4 rounded-xl bg-gradient-to-r from-[#6C5CE7]/10 to-[#00F5D4]/10 border border-[#6C5CE7]/30 hover:border-[#6C5CE7]/60 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <div className="flex items-center gap-4">
-                    <span className="text-3xl">{info.icon}</span>
+                    <span className="text-3xl">{item.info.icon}</span>
                     <div className="text-left flex-1">
                       <p className="text-white font-semibold group-hover:text-[#00F5D4] transition-colors">
-                        {info.name}
+                        {isThisConnectorPending ? `Connecting ${item.info.name}...` : item.info.name}
                       </p>
-                      <p className="text-xs text-gray-400">{info.description}</p>
+                      <p className="text-xs text-gray-400">{item.info.description}</p>
                     </div>
                     <Wallet className="w-5 h-5 text-gray-400 group-hover:text-[#6C5CE7] transition-colors" />
                   </div>

@@ -6,48 +6,102 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 export const Dashboard = () => {
   const { stats } = useIdoContract();
 
-  const salesData = [
-    { name: 'Week 1', sold: 400000, raised: 20000 },
-    { name: 'Week 2', sold: 800000, raised: 40000 },
-    { name: 'Week 3', sold: 1200000, raised: 60000 },
-    { name: 'Week 4', sold: 1800000, raised: 90000 },
-    { name: 'Week 5', sold: 2450000, raised: 122500 },
-  ];
+  const parseNumeric = (value: string) => {
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const toCompact = (value: number, maximumFractionDigits = 2) =>
+    new Intl.NumberFormat('en-US', {
+      notation: 'compact',
+      maximumFractionDigits,
+    }).format(value);
+
+  const totalUsdtCollected = parseNumeric(stats.totalUsdtCollected);
+  const totalSold = parseNumeric(stats.totalSold);
+  const usdtPerTier = parseNumeric(stats.usdtPerTier) || 2_000_000;
+  const startPrice = parseNumeric(stats.startPrice) || 0.05;
+  const priceIncrement = parseNumeric(stats.priceIncrement) || 0.02;
+  const maxTokens = parseNumeric(stats.maxTokens) || 244_000_000;
+
+  const salesData = (() => {
+    let cumulativeSold = 0;
+
+    return Array.from({ length: 5 }, (_, index) => {
+      const tier = index;
+      const tierStartUsdt = usdtPerTier * tier;
+      const collectedInTier = Math.max(0, Math.min(usdtPerTier, totalUsdtCollected - tierStartUsdt));
+      const tierPrice = startPrice + priceIncrement * tier;
+      const soldInTier = tierPrice > 0 ? collectedInTier / tierPrice : 0;
+      cumulativeSold += soldInTier;
+
+      return {
+        name: `Tier ${tier + 1}`,
+        sold: cumulativeSold,
+        raised: Math.min(totalUsdtCollected, usdtPerTier * (tier + 1)),
+      };
+    });
+  })();
+
+  const tier1Sold = startPrice > 0 ? Math.min(totalUsdtCollected, usdtPerTier) / startPrice : 0;
+  const tier2Sold = startPrice + priceIncrement > 0
+    ? Math.min(Math.max(totalUsdtCollected - usdtPerTier, 0), usdtPerTier) / (startPrice + priceIncrement)
+    : 0;
+  const tier3Sold = Math.max(totalSold - tier1Sold - tier2Sold, 0);
+  const remainingTokens = Math.max(maxTokens - totalSold, 0);
 
   const tierData = [
-    { name: 'Tier 1', value: 1000000, color: '#6C5CE7' },
-    { name: 'Tier 2', value: 850000, color: '#00F5D4' },
-    { name: 'Tier 3', value: 600000, color: '#9B7EDE' },
-    { name: 'Remaining', value: 2550000, color: '#1a1a2e' },
+    { name: 'Tier 1', value: Math.max(tier1Sold, 0), color: '#6C5CE7' },
+    { name: 'Tier 2', value: Math.max(tier2Sold, 0), color: '#00F5D4' },
+    { name: 'Tier 3+', value: Math.max(tier3Sold, 0), color: '#9B7EDE' },
+    { name: 'Remaining', value: Math.max(remainingTokens, 0), color: '#1a1a2e' },
   ];
+
+  const tierRows = Array.from({ length: 3 }, (_, index) => {
+    const tier = index;
+    const tierStartUsdt = usdtPerTier * tier;
+    const tierPrice = startPrice + priceIncrement * tier;
+    const tierCollected = Math.max(0, Math.min(usdtPerTier, totalUsdtCollected - tierStartUsdt));
+    const tierAllocation = tierPrice > 0 ? usdtPerTier / tierPrice : 0;
+    const soldOut = tierCollected >= usdtPerTier;
+    const isCurrentTier = stats.currentTier === tier;
+    const isActive = isCurrentTier && !soldOut;
+
+    return {
+      tier: `Tier ${tier + 1}`,
+      price: `$${tierPrice.toFixed(2)}`,
+      allocation: `${toCompact(tierAllocation)} tokens`,
+      status: soldOut ? 'Sold Out' : isActive ? 'Active' : 'Upcoming',
+    };
+  });
 
   const statsCards = [
     {
       icon: DollarSign,
       label: 'Total Raised',
-      value: `$${parseFloat(stats.totalUsdtCollected).toLocaleString()}`,
-      change: '+12.5%',
+      value: `$${totalUsdtCollected.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+      change: `${((totalUsdtCollected / usdtPerTier) * 100).toFixed(2)}% of tier cap`,
       positive: true,
     },
     {
       icon: Package,
       label: 'Tokens Sold',
-      value: `${parseFloat(stats.totalSold).toLocaleString()}`,
-      change: '+8.3%',
+      value: `${totalSold.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+      change: `${((totalSold / maxTokens) * 100).toFixed(2)}% of max supply`,
       positive: true,
     },
     {
       icon: TrendingUp,
       label: 'Current Price',
       value: `$${stats.currentPrice}`,
-      change: 'Tier 2',
+      change: `Tier ${stats.currentTier + 1}`,
       positive: true,
     },
     {
       icon: Users,
       label: 'Participants',
-      value: '1,247',
-      change: '+156 today',
+      value: stats.totalParticipants.toLocaleString(),
+      change: 'Wallets joined',
       positive: true,
     },
   ];
@@ -102,6 +156,13 @@ export const Dashboard = () => {
               <XAxis dataKey="name" stroke="#888" />
               <YAxis stroke="#888" />
               <Tooltip
+                formatter={(value: number, name: string) => {
+                  if (name === 'sold') {
+                    return [toCompact(value), 'Tokens Sold'];
+                  }
+
+                  return [`$${toCompact(value)}`, 'USDT Raised'];
+                }}
                 contentStyle={{
                   backgroundColor: '#0a0a0f',
                   border: '1px solid #6C5CE7',
@@ -162,11 +223,7 @@ export const Dashboard = () => {
           <h3 className="text-xl font-semibold">Tier Information</h3>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[
-            { tier: 'Tier 1', price: '$0.03', allocation: '1M tokens', status: 'Sold Out' },
-            { tier: 'Tier 2', price: '$0.05', allocation: '1.5M tokens', status: 'Active' },
-            { tier: 'Tier 3', price: '$0.08', allocation: '2M tokens', status: 'Upcoming' },
-          ].map((tier, index) => (
+          {tierRows.map((tier, index) => (
             <div
               key={index}
               className={`p-4 rounded-xl border ${

@@ -11,20 +11,73 @@ type TransactionState = 'idle' | 'approving' | 'pending' | 'success' | 'failed';
 export function InvoicePaymentPage() {
   const { invoiceId } = useParams();
   const { address, balance, isConnecting, connect, disconnect } = useWallet();
-  const { stats, approveUsdt, payInvoice } = useIdoContract();
+  const { stats, approveUsdt, payInvoice, getOnChainInvoice, getInvoicePaymentTxHash } = useIdoContract();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [transactionState, setTransactionState] = useState<TransactionState>('idle');
   const [transactionHash, setTransactionHash] = useState('');
   const [timeRemaining, setTimeRemaining] = useState('');
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [isLoadingInvoice, setIsLoadingInvoice] = useState(true);
 
   useEffect(() => {
-    checkExpiredInvoices();
-    if (invoiceId) {
-      const inv = getInvoiceById(invoiceId);
-      setInvoice(inv);
-    }
+    const loadInvoice = async () => {
+      checkExpiredInvoices();
+
+      if (!invoiceId) {
+        setInvoice(null);
+        setIsLoadingInvoice(false);
+        return;
+      }
+
+      const localInvoice = getInvoiceById(invoiceId);
+      const onChainInvoice = await getOnChainInvoice(invoiceId);
+
+      if (!onChainInvoice) {
+        setInvoice(localInvoice);
+        setIsLoadingInvoice(false);
+        return;
+      }
+
+      const nowSeconds = Math.floor(Date.now() / 1000);
+      const isExpired = !onChainInvoice.paid && nowSeconds > onChainInvoice.expiryDate;
+      const resolvedStatus = onChainInvoice.paid ? 'paid' : isExpired ? 'expired' : 'pending';
+      const logTxHash = onChainInvoice.paid
+        ? await getInvoicePaymentTxHash(invoiceId)
+        : null;
+
+      const mergedInvoice: Invoice = {
+        id: onChainInvoice.invoiceId || invoiceId,
+        amount: Number(onChainInvoice.usdtAmount),
+        tokenAmount: Number(onChainInvoice.tokenAmount),
+        status: resolvedStatus,
+        createdDate:
+          localInvoice?.createdDate ||
+          new Date(Math.max(onChainInvoice.expiryDate - 24 * 60 * 60, 0) * 1000).toISOString(),
+        expiryDate: new Date(onChainInvoice.expiryDate * 1000).toISOString(),
+        recipientWallet:
+          onChainInvoice.recipientWallet !== '0x0000000000000000000000000000000000000000'
+            ? onChainInvoice.recipientWallet
+            : localInvoice?.recipientWallet,
+        notes: onChainInvoice.notes || localInvoice?.notes,
+        transactionHash: logTxHash || localInvoice?.transactionHash,
+        payer:
+          onChainInvoice.payer !== '0x0000000000000000000000000000000000000000'
+            ? onChainInvoice.payer
+            : localInvoice?.payer,
+        paidAt:
+          onChainInvoice.paidAt > 0
+            ? new Date(onChainInvoice.paidAt * 1000).toISOString()
+            : localInvoice?.paidAt,
+        usdtSpent: Number(onChainInvoice.usdtSpent || 0),
+      };
+
+      saveInvoice(mergedInvoice);
+      setInvoice(mergedInvoice);
+      setIsLoadingInvoice(false);
+    };
+
+    loadInvoice();
   }, [invoiceId]);
 
   useEffect(() => {
@@ -84,10 +137,13 @@ export function InvoicePaymentPage() {
 
       invoice.status = 'paid';
       invoice.transactionHash = txHash;
+      invoice.payer = address;
+      invoice.paidAt = new Date().toISOString();
+      invoice.usdtSpent = invoice.amount;
       saveInvoice(invoice);
       setInvoice({ ...invoice });
 
-      toast.success('Payment submitted successfully');
+      toast.success('Payment confirmed on-chain');
       setTransactionState('success');
     } catch (error) {
       console.error('Payment failed:', error);
@@ -100,6 +156,18 @@ export function InvoicePaymentPage() {
   const needsApproval = invoice
     ? parseFloat(stats.usdtAllowance || '0') < invoice.amount
     : true;
+
+  if (isLoadingInvoice) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#0B0F1A' }}>
+        <div className="text-center">
+          <Loader2 className="w-16 h-16 text-[#6C5CE7] animate-spin mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-white mb-2">Loading Invoice</h2>
+          <p className="text-gray-400">Fetching invoice state from blockchain...</p>
+        </div>
+      </div>
+    );
+  }
 
   const copyToClipboard = (text: string, type: 'hash' | 'link') => {
     navigator.clipboard.writeText(text);
@@ -378,9 +446,12 @@ export function InvoicePaymentPage() {
               </div>
             </div>
 
-            <button className="w-full py-4 rounded-xl bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] text-white font-semibold hover:opacity-90 transition-opacity">
+            <Link
+              to="/portfolio"
+              className="block w-full py-4 rounded-xl bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] text-white font-semibold hover:opacity-90 transition-opacity"
+            >
               View Portfolio
-            </button>
+            </Link>
           </div>
         )}
 

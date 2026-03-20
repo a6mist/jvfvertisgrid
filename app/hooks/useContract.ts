@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useAccount, useReadContract, useWriteContract, usePublicClient } from 'wagmi';
-import { formatUnits, parseUnits, type Address, isAddress } from 'viem';
+import { formatUnits, parseUnits, type Address, isAddress, parseAbiItem } from 'viem';
 import {
   IDO_CONTRACT_ADDRESS,
   USDT_CONTRACT_ADDRESS,
@@ -32,6 +32,41 @@ const IDO_ABI = [
   },
   {
     name: 'totalUsdtCollected',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'uint256' }],
+  },
+  {
+    name: 'totalParticipants',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'uint256' }],
+  },
+  {
+    name: 'START_PRICE',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'uint256' }],
+  },
+  {
+    name: 'PRICE_INCREMENT',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'uint256' }],
+  },
+  {
+    name: 'USDT_PER_TIER',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'uint256' }],
+  },
+  {
+    name: 'MAX_TOKENS',
     type: 'function',
     stateMutability: 'view',
     inputs: [],
@@ -99,6 +134,30 @@ const IDO_ABI = [
     outputs: [],
   },
   {
+    name: 'getInvoice',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ type: 'string', name: 'invoiceId' }],
+    outputs: [
+      {
+        type: 'tuple',
+        components: [
+          { type: 'bool', name: 'exists' },
+          { type: 'bool', name: 'paid' },
+          { type: 'string', name: 'invoiceId' },
+          { type: 'uint256', name: 'usdtAmount' },
+          { type: 'uint256', name: 'tokenAmount' },
+          { type: 'uint256', name: 'expiryDate' },
+          { type: 'address', name: 'recipientWallet' },
+          { type: 'string', name: 'notes' },
+          { type: 'address', name: 'payer' },
+          { type: 'uint256', name: 'paidAt' },
+          { type: 'uint256', name: 'usdtSpent' },
+        ],
+      },
+    ],
+  },
+  {
     name: 'claim',
     type: 'function',
     stateMutability: 'nonpayable',
@@ -136,11 +195,48 @@ export interface IdoStats {
   currentTier: number;
   totalSold: string;
   totalUsdtCollected: string;
+  totalParticipants: number;
+  startPrice: string;
+  priceIncrement: string;
+  usdtPerTier: string;
+  maxTokens: string;
   userPurchased: string;
   userClaimed: boolean;
   usdtBalance: string;
   usdtAllowance: string;
 }
+
+export interface PortfolioActivityItem {
+  type: 'purchase' | 'claim';
+  amount: string;
+  usdtAmount?: string;
+  txHash: `0x${string}`;
+  timestamp: number;
+}
+
+export interface OnChainInvoice {
+  exists: boolean;
+  paid: boolean;
+  invoiceId: string;
+  usdtAmount: string;
+  tokenAmount: string;
+  expiryDate: number;
+  recipientWallet: Address;
+  notes: string;
+  payer: Address;
+  paidAt: number;
+  usdtSpent: string;
+}
+
+const TOKENS_PURCHASED_EVENT = parseAbiItem(
+  'event TokensPurchased(address indexed buyer, uint256 tokenAmount, uint256 usdtSpent)',
+);
+const TOKENS_CLAIMED_EVENT = parseAbiItem(
+  'event TokensClaimed(address indexed claimer, uint256 amount)',
+);
+const INVOICE_PAID_EVENT = parseAbiItem(
+  'event InvoicePaid(bytes32 indexed invoiceKey, string invoiceId, address indexed payer, uint256 tokenAmount, uint256 usdtSpent)',
+);
 
 export const useIdoContract = () => {
   const { address, isConnected } = useAccount();
@@ -173,6 +269,41 @@ export const useIdoContract = () => {
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ABI,
     functionName: 'totalUsdtCollected',
+    query: { enabled: isContractsConfigured },
+  });
+
+  const { data: totalParticipantsRaw } = useReadContract({
+    address: IDO_CONTRACT_ADDRESS,
+    abi: IDO_ABI,
+    functionName: 'totalParticipants',
+    query: { enabled: isContractsConfigured },
+  });
+
+  const { data: startPriceRaw } = useReadContract({
+    address: IDO_CONTRACT_ADDRESS,
+    abi: IDO_ABI,
+    functionName: 'START_PRICE',
+    query: { enabled: isContractsConfigured },
+  });
+
+  const { data: priceIncrementRaw } = useReadContract({
+    address: IDO_CONTRACT_ADDRESS,
+    abi: IDO_ABI,
+    functionName: 'PRICE_INCREMENT',
+    query: { enabled: isContractsConfigured },
+  });
+
+  const { data: usdtPerTierRaw } = useReadContract({
+    address: IDO_CONTRACT_ADDRESS,
+    abi: IDO_ABI,
+    functionName: 'USDT_PER_TIER',
+    query: { enabled: isContractsConfigured },
+  });
+
+  const { data: maxTokensRaw } = useReadContract({
+    address: IDO_CONTRACT_ADDRESS,
+    abi: IDO_ABI,
+    functionName: 'MAX_TOKENS',
     query: { enabled: isContractsConfigured },
   });
 
@@ -214,6 +345,11 @@ export const useIdoContract = () => {
       currentTier: Number(currentTierRaw ?? 0n),
       totalSold: totalSoldRaw ? formatUnits(totalSoldRaw, 18) : '0',
       totalUsdtCollected: totalUsdtCollectedRaw ? formatUnits(totalUsdtCollectedRaw, 6) : '0',
+      totalParticipants: Number(totalParticipantsRaw ?? 0n),
+      startPrice: startPriceRaw ? formatUnits(startPriceRaw, 6) : '0',
+      priceIncrement: priceIncrementRaw ? formatUnits(priceIncrementRaw, 6) : '0',
+      usdtPerTier: usdtPerTierRaw ? formatUnits(usdtPerTierRaw, 6) : '0',
+      maxTokens: maxTokensRaw ? formatUnits(maxTokensRaw, 18) : '0',
       userPurchased: userPurchasedRaw ? formatUnits(userPurchasedRaw, 18) : '0',
       userClaimed: Boolean(userClaimedRaw ?? false),
       usdtBalance: usdtBalanceRaw ? formatUnits(usdtBalanceRaw, 6) : '0',
@@ -224,6 +360,11 @@ export const useIdoContract = () => {
       currentTierRaw,
       totalSoldRaw,
       totalUsdtCollectedRaw,
+      totalParticipantsRaw,
+      startPriceRaw,
+      priceIncrementRaw,
+      usdtPerTierRaw,
+      maxTokensRaw,
       userPurchasedRaw,
       userClaimedRaw,
       usdtBalanceRaw,
@@ -301,6 +442,7 @@ export const useIdoContract = () => {
   const payInvoice = async (invoiceId: string, usdtAmount: string) => {
     if (!address) throw new Error('Wallet not connected');
     if (!isContractsConfigured) throw new Error('Contract addresses are not configured');
+    if (!publicClient) throw new Error('Public client not available');
 
     try {
       const maxUsdtAllowed = parseUnits(usdtAmount, 6);
@@ -310,10 +452,77 @@ export const useIdoContract = () => {
         functionName: 'payInvoice',
         args: [invoiceId, maxUsdtAllowed],
       });
+
+      await publicClient.waitForTransactionReceipt({ hash });
       return hash;
     } catch (error) {
       console.error('Pay invoice failed:', error);
       throw error;
+    }
+  };
+
+  const getOnChainInvoice = async (invoiceId: string): Promise<OnChainInvoice | null> => {
+    if (!isContractsConfigured || !publicClient || !invoiceId) return null;
+
+    try {
+      const rawInvoice = (await publicClient.readContract({
+        address: IDO_CONTRACT_ADDRESS,
+        abi: IDO_ABI,
+        functionName: 'getInvoice',
+        args: [invoiceId],
+      })) as unknown as [
+        boolean,
+        boolean,
+        string,
+        bigint,
+        bigint,
+        bigint,
+        Address,
+        string,
+        Address,
+        bigint,
+        bigint,
+      ];
+
+      if (!rawInvoice?.[0]) return null;
+
+      return {
+        exists: rawInvoice[0],
+        paid: rawInvoice[1],
+        invoiceId: rawInvoice[2],
+        usdtAmount: formatUnits(rawInvoice[3], 6),
+        tokenAmount: formatUnits(rawInvoice[4], 18),
+        expiryDate: Number(rawInvoice[5]),
+        recipientWallet: rawInvoice[6],
+        notes: rawInvoice[7],
+        payer: rawInvoice[8],
+        paidAt: Number(rawInvoice[9]),
+        usdtSpent: formatUnits(rawInvoice[10], 6),
+      };
+    } catch (error) {
+      console.error('Failed to read on-chain invoice:', error);
+      return null;
+    }
+  };
+
+  const getInvoicePaymentTxHash = async (invoiceId: string): Promise<string | null> => {
+    if (!isContractsConfigured || !publicClient || !invoiceId) return null;
+
+    try {
+      const logs = await publicClient.getLogs({
+        address: IDO_CONTRACT_ADDRESS,
+        event: INVOICE_PAID_EVENT,
+        args: { invoiceId },
+        fromBlock: 0n,
+        toBlock: 'latest',
+      });
+
+      if (logs.length === 0) return null;
+
+      return logs[logs.length - 1].transactionHash;
+    } catch (error) {
+      console.error('Failed to read invoice payment logs:', error);
+      return null;
     }
   };
 
@@ -327,6 +536,7 @@ export const useIdoContract = () => {
   }) => {
     if (!address) throw new Error('Wallet not connected');
     if (!isContractsConfigured) throw new Error('Contract addresses are not configured');
+    if (!publicClient) throw new Error('Public client not available');
 
     const recipient = params.recipientWallet?.trim();
     if (recipient && !isAddress(recipient)) {
@@ -352,6 +562,8 @@ export const useIdoContract = () => {
           params.notes || '',
         ],
       });
+
+      await publicClient.waitForTransactionReceipt({ hash });
       return hash;
     } catch (error) {
       console.error('Create invoice failed:', error);
@@ -371,13 +583,88 @@ export const useIdoContract = () => {
     };
   };
 
+  const getUserActivity = async (
+    userAddress?: Address,
+    limit = 50,
+  ): Promise<PortfolioActivityItem[]> => {
+    if (!isContractsConfigured || !publicClient) return [];
+
+    const target = userAddress ?? address;
+    if (!target) return [];
+
+    try {
+      const [purchaseLogs, claimLogs] = await Promise.all([
+        publicClient.getLogs({
+          address: IDO_CONTRACT_ADDRESS,
+          event: TOKENS_PURCHASED_EVENT,
+          args: { buyer: target },
+          fromBlock: 0n,
+          toBlock: 'latest',
+        }),
+        publicClient.getLogs({
+          address: IDO_CONTRACT_ADDRESS,
+          event: TOKENS_CLAIMED_EVENT,
+          args: { claimer: target },
+          fromBlock: 0n,
+          toBlock: 'latest',
+        }),
+      ]);
+
+      const mergedLogs = [...purchaseLogs, ...claimLogs].sort((a, b) => {
+        if (a.blockNumber === b.blockNumber) {
+          return Number((b.logIndex ?? 0) - (a.logIndex ?? 0));
+        }
+        return Number((b.blockNumber ?? 0n) - (a.blockNumber ?? 0n));
+      });
+
+      const recentLogs = mergedLogs.slice(0, limit);
+      const blockNumbers = [...new Set(recentLogs.map((log) => String(log.blockNumber ?? 0n)))];
+      const blocks = await Promise.all(
+        blockNumbers.map(async (blockNumber) => {
+          const block = await publicClient.getBlock({ blockNumber: BigInt(blockNumber) });
+          return [blockNumber, Number(block.timestamp)] as const;
+        }),
+      );
+      const blockTimestampMap = new Map<string, number>(blocks);
+
+      return recentLogs.map((log) => {
+        const eventName = (log as { eventName?: string }).eventName;
+        const args = (log as { args?: Record<string, unknown> }).args ?? {};
+        const timestamp = blockTimestampMap.get(String(log.blockNumber ?? 0n)) ?? 0;
+
+        if (eventName === 'TokensPurchased') {
+          return {
+            type: 'purchase',
+            amount: formatUnits((args.tokenAmount as bigint) ?? 0n, 18),
+            usdtAmount: formatUnits((args.usdtSpent as bigint) ?? 0n, 6),
+            txHash: log.transactionHash,
+            timestamp,
+          };
+        }
+
+        return {
+          type: 'claim',
+          amount: formatUnits((args.amount as bigint) ?? 0n, 18),
+          txHash: log.transactionHash,
+          timestamp,
+        };
+      });
+    } catch (error) {
+      console.error('Failed to load user activity:', error);
+      return [];
+    }
+  };
+
   return {
     stats,
     approveUsdt,
     buyTokens,
     payInvoice,
     createInvoice,
+    getOnChainInvoice,
+    getInvoicePaymentTxHash,
     claimTokens,
     simulateBuy,
+    getUserActivity,
   };
 };

@@ -14,14 +14,14 @@ export function HomePage() {
 
         <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           <Link 
-            to="/pay/SAMPLE-INVOICE"
+            to="/admin/invoices"
             className="group p-8 rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 hover:border-[#6C5CE7]/50 transition-all hover:shadow-lg hover:shadow-[#6C5CE7]/20"
           >
             <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-[#6C5CE7] to-[#00F5D4] flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
               <Wallet className="w-8 h-8 text-white" />
             </div>
             <h2 className="text-2xl font-bold text-white mb-2">Pay Invoice</h2>
-            <p className="text-gray-400">Access public invoice payment page</p>
+            <p className="text-gray-400">Open a generated payment link from invoice records</p>
           </Link>
 
           <Link 

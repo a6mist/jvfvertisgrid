@@ -1,14 +1,40 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAccount } from 'wagmi';
 import { GlassCard } from '../components/GlassCard';
-import { useIdoContract } from '../hooks/useContract';
+import { useIdoContract, type PortfolioActivityItem } from '../hooks/useContract';
 import { Wallet, TrendingUp, Clock, CheckCircle, Gift, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const Portfolio = () => {
   const { address, isConnected } = useAccount();
-  const { stats, claimTokens } = useIdoContract();
+  const { stats, claimTokens, getUserActivity } = useIdoContract();
   const [isClaiming, setIsClaiming] = useState(false);
+  const [activity, setActivity] = useState<PortfolioActivityItem[]>([]);
+  const [isLoadingActivity, setIsLoadingActivity] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadActivity = async () => {
+      if (!isConnected || !address) {
+        setActivity([]);
+        return;
+      }
+
+      setIsLoadingActivity(true);
+      const events = await getUserActivity(address);
+      if (!cancelled) {
+        setActivity(events);
+        setIsLoadingActivity(false);
+      }
+    };
+
+    void loadActivity();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [address, isConnected]);
 
   const handleClaim = async () => {
     if (!isConnected) return;
@@ -30,6 +56,23 @@ export const Portfolio = () => {
     return `${addr.slice(0, 8)}...${addr.slice(-6)}`;
   };
 
+  const formatDate = (timestamp: number) => {
+    if (!timestamp) return 'Unknown time';
+    return new Date(timestamp * 1000).toLocaleString();
+  };
+
+  const purchaseTotals = useMemo(() => {
+    return activity.reduce(
+      (acc, item) => {
+        if (item.type !== 'purchase') return acc;
+        acc.tokens += parseFloat(item.amount || '0');
+        acc.usdt += parseFloat(item.usdtAmount || '0');
+        return acc;
+      },
+      { tokens: 0, usdt: 0 },
+    );
+  }, [activity]);
+
   if (!isConnected) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
@@ -44,8 +87,13 @@ export const Portfolio = () => {
     );
   }
 
-  const totalValue = parseFloat(stats.userPurchased) * parseFloat(stats.currentPrice);
-  const vestingProgress = 25; // Mock vesting progress
+  const totalTokens = parseFloat(stats.userPurchased || '0');
+  const currentPrice = parseFloat(stats.currentPrice || '0');
+  const avgBuyPrice =
+    purchaseTotals.tokens > 0 ? purchaseTotals.usdt / purchaseTotals.tokens : currentPrice;
+  const gainPercent = avgBuyPrice > 0 ? ((currentPrice - avgBuyPrice) / avgBuyPrice) * 100 : 0;
+  const totalValue = totalTokens * currentPrice;
+  const claimProgress = stats.userClaimed ? 100 : 0;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -65,7 +113,7 @@ export const Portfolio = () => {
             <div>
               <p className="text-sm text-gray-400 mb-1">Total Tokens</p>
               <p className="text-3xl font-bold text-[#00F5D4] mb-1">
-                {parseFloat(stats.userPurchased).toLocaleString()}
+                {totalTokens.toLocaleString()}
               </p>
               <p className="text-sm text-gray-400">WL Tokens</p>
             </div>
@@ -80,7 +128,10 @@ export const Portfolio = () => {
             <div>
               <p className="text-sm text-gray-400 mb-1">Current Value</p>
               <p className="text-3xl font-bold mb-1">${totalValue.toFixed(2)}</p>
-              <p className="text-sm text-green-400">+15.2% gain</p>
+              <p className={`text-sm ${gainPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {gainPercent >= 0 ? '+' : ''}
+                {gainPercent.toFixed(2)}% vs avg buy
+              </p>
             </div>
             <div className="p-3 rounded-xl bg-gradient-to-br from-[#6C5CE7]/20 to-[#00F5D4]/20">
               <TrendingUp className="w-6 h-6 text-green-400" />
@@ -92,7 +143,7 @@ export const Portfolio = () => {
           <div className="flex items-start justify-between">
             <div>
               <p className="text-sm text-gray-400 mb-1">Avg. Buy Price</p>
-              <p className="text-3xl font-bold mb-1">${stats.currentPrice}</p>
+              <p className="text-3xl font-bold mb-1">${avgBuyPrice.toFixed(6)}</p>
               <p className="text-sm text-gray-400">per token</p>
             </div>
             <div className="p-3 rounded-xl bg-gradient-to-br from-[#6C5CE7]/20 to-[#00F5D4]/20">
@@ -127,31 +178,31 @@ export const Portfolio = () => {
                     <div>
                       <p className="text-sm text-gray-400 mb-1">Available to Claim</p>
                       <p className="text-2xl font-bold text-[#00F5D4]">
-                        {(parseFloat(stats.userPurchased) * 0.25).toLocaleString()} WL
+                        {stats.userClaimed ? '0' : totalTokens.toLocaleString()} WL
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-400 mb-1">Vesting</p>
+                      <p className="text-sm text-gray-400 mb-1">Claim Status</p>
                       <p className="text-2xl font-bold">
-                        {(parseFloat(stats.userPurchased) * 0.75).toLocaleString()} WL
+                        {stats.userClaimed ? 'Claimed' : 'Pending'}
                       </p>
                     </div>
                   </div>
                   
                   <div className="mb-2">
                     <div className="flex justify-between text-sm mb-1">
-                      <span className="text-gray-400">Vesting Progress</span>
-                      <span className="text-[#00F5D4]">{vestingProgress}%</span>
+                      <span className="text-gray-400">Claim Progress</span>
+                      <span className="text-[#00F5D4]">{claimProgress}%</span>
                     </div>
                     <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4]"
-                        style={{ width: `${vestingProgress}%` }}
+                        style={{ width: `${claimProgress}%` }}
                       />
                     </div>
                   </div>
                   <p className="text-xs text-gray-400 mt-2">
-                    Next unlock: April 1, 2026 • 25% monthly vesting
+                    Claim availability is enforced by on-chain sale and release settings.
                   </p>
                 </div>
 
@@ -184,41 +235,35 @@ export const Portfolio = () => {
             </div>
 
             <div className="space-y-3">
-              {[
-                {
-                  type: 'Purchase',
-                  amount: '500 WL',
-                  price: '$25.00',
-                  date: 'Mar 15, 2026',
-                  status: 'Completed',
-                },
-                {
-                  type: 'Purchase',
-                  amount: '300 WL',
-                  price: '$15.00',
-                  date: 'Mar 10, 2026',
-                  status: 'Completed',
-                },
-                {
-                  type: 'Purchase',
-                  amount: '200 WL',
-                  price: '$10.00',
-                  date: 'Mar 5, 2026',
-                  status: 'Completed',
-                },
-              ].map((tx, index) => (
+              {isLoadingActivity && (
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-gray-400 text-sm">
+                  Loading on-chain history...
+                </div>
+              )}
+
+              {!isLoadingActivity && activity.length === 0 && (
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-gray-400 text-sm">
+                  No on-chain transactions found for this wallet yet.
+                </div>
+              )}
+
+              {activity.map((tx, index) => (
                 <div
                   key={index}
                   className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-[#6C5CE7]/50 transition-all"
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-semibold">{tx.type}</p>
-                      <p className="text-sm text-gray-400">{tx.date}</p>
+                      <p className="font-semibold">{tx.type === 'purchase' ? 'Purchase' : 'Claim'}</p>
+                      <p className="text-sm text-gray-400">{formatDate(tx.timestamp)}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-[#00F5D4]">{tx.amount}</p>
-                      <p className="text-sm text-gray-400">{tx.price}</p>
+                      <p className="font-semibold text-[#00F5D4]">
+                        {parseFloat(tx.amount).toLocaleString()} WL
+                      </p>
+                      <p className="text-sm text-gray-400">
+                        {tx.type === 'purchase' ? `$${parseFloat(tx.usdtAmount || '0').toFixed(2)}` : 'Claimed'}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -248,21 +293,27 @@ export const Portfolio = () => {
 
           {/* Vesting Schedule */}
           <GlassCard>
-            <h3 className="font-semibold mb-4">Vesting Schedule</h3>
+            <h3 className="font-semibold mb-4">Claim Milestones</h3>
             <div className="space-y-3">
               {[
-                { date: 'Mar 20, 2026', amount: '25%', status: 'claimed' },
-                { date: 'Apr 20, 2026', amount: '25%', status: 'upcoming' },
-                { date: 'May 20, 2026', amount: '25%', status: 'locked' },
-                { date: 'Jun 20, 2026', amount: '25%', status: 'locked' },
+                {
+                  label: 'Purchased Tokens',
+                  detail: `${totalTokens.toLocaleString()} WL recorded`,
+                  status: totalTokens > 0 ? 'claimed' : 'locked',
+                },
+                {
+                  label: 'Claim Transaction',
+                  detail: stats.userClaimed ? 'On-chain claim completed' : 'Waiting for claim',
+                  status: stats.userClaimed ? 'claimed' : 'upcoming',
+                },
               ].map((vest, index) => (
                 <div
                   key={index}
                   className="flex items-center justify-between p-3 rounded-lg bg-white/5"
                 >
                   <div>
-                    <p className="text-sm font-semibold">{vest.date}</p>
-                    <p className="text-xs text-gray-400">{vest.amount} unlock</p>
+                    <p className="text-sm font-semibold">{vest.label}</p>
+                    <p className="text-xs text-gray-400">{vest.detail}</p>
                   </div>
                   <span
                     className={`px-2 py-1 rounded text-xs ${
@@ -287,7 +338,7 @@ export const Portfolio = () => {
               <div className="text-sm">
                 <h3 className="font-semibold mb-2 text-blue-300">Vesting Info</h3>
                 <p className="text-gray-300">
-                  25% of tokens are released immediately. The remaining 75% vest monthly over 3 months.
+                  Claiming is now driven by live contract state, not mock vesting timelines.
                 </p>
               </div>
             </div>

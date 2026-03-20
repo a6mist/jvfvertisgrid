@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { useAccount } from 'wagmi';
+import { useAccount, useConnect } from 'wagmi';
 import { GlassCard } from '../components/GlassCard';
 import { useIdoContract } from '../hooks/useContract';
+import { isContractsConfigured } from '../config/contracts';
 import { DollarSign, ArrowRight, AlertCircle, CheckCircle, Loader2, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const BuyTokens = () => {
   const { address, isConnected } = useAccount();
+  const { connectors, connectAsync, isPending: isConnectingWallet } = useConnect();
   const { stats, approveUsdt, buyTokens, simulateBuy } = useIdoContract();
   const [usdtAmount, setUsdtAmount] = useState('');
   const [isApproving, setIsApproving] = useState(false);
@@ -14,10 +16,41 @@ export const BuyTokens = () => {
   const [txHash, setTxHash] = useState('');
 
   const simulation = usdtAmount ? simulateBuy(usdtAmount) : null;
+  const canUseContracts = isConnected && isContractsConfigured;
+  const blockReason = !isConnected
+    ? 'Connect wallet first'
+    : !isContractsConfigured
+      ? 'Configure contract addresses'
+      : '';
   const needsApproval = parseFloat(usdtAmount || '0') > parseFloat(stats.usdtAllowance);
+  const currentTier = Number(stats.currentTier || 0);
+  const totalRaised = Number(stats.totalUsdtCollected || 0);
+  const usdtPerTier = 2_000_000;
+  const currentTierProgress = Math.min(((totalRaised % usdtPerTier) / usdtPerTier) * 100, 100);
+  const tierRows = [0, 1, 2].map((offset) => {
+    const tier = currentTier + offset;
+    const price = 0.05 + (0.02 * tier);
+    const progress = offset === 0 ? currentTierProgress : 0;
+    return { tier, price, progress };
+  });
+
+  const handleQuickConnect = async () => {
+    if (connectors.length === 0) {
+      toast.error('No wallet connector available.');
+      return;
+    }
+
+    try {
+      await connectAsync({ connector: connectors[0] });
+      toast.success('Wallet connected successfully!');
+    } catch (error) {
+      console.error('Connect wallet failed:', error);
+      toast.error('Failed to connect wallet.');
+    }
+  };
 
   const handleApprove = async () => {
-    if (!usdtAmount || !isConnected) return;
+    if (!usdtAmount || !canUseContracts) return;
 
     setIsApproving(true);
     try {
@@ -25,7 +58,8 @@ export const BuyTokens = () => {
       toast.success('USDT approval successful!');
       console.log('Approval TX:', hash);
     } catch (error) {
-      toast.error('Approval failed. Please try again.');
+      const message = error instanceof Error ? error.message : 'Approval failed. Please try again.';
+      toast.error(message);
       console.error('Approval error:', error);
     } finally {
       setIsApproving(false);
@@ -33,7 +67,7 @@ export const BuyTokens = () => {
   };
 
   const handleBuy = async () => {
-    if (!usdtAmount || !isConnected) return;
+    if (!usdtAmount || !canUseContracts) return;
 
     setIsBuying(true);
     try {
@@ -42,7 +76,8 @@ export const BuyTokens = () => {
       toast.success('Purchase successful!');
       setUsdtAmount('');
     } catch (error) {
-      toast.error('Purchase failed. Please try again.');
+      const message = error instanceof Error ? error.message : 'Purchase failed. Please try again.';
+      toast.error(message);
       console.error('Buy error:', error);
     } finally {
       setIsBuying(false);
@@ -74,6 +109,25 @@ export const BuyTokens = () => {
                   <div className="text-sm text-yellow-200">
                     <p className="font-semibold mb-1">Wallet Not Connected</p>
                     <p>Please connect your wallet to participate in the IDO</p>
+                    <button
+                      onClick={handleQuickConnect}
+                      disabled={isConnectingWallet}
+                      className="mt-3 px-3 py-2 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/40 text-yellow-100 transition-all disabled:opacity-50"
+                    >
+                      {isConnectingWallet ? 'Connecting...' : 'Connect Wallet'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {isConnected && !isContractsConfigured && (
+              <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30">
+                <div className="flex gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-red-200">
+                    <p className="font-semibold mb-1">Contract Not Configured</p>
+                    <p>Set VITE_IDO_CONTRACT_ADDRESS and VITE_USDT_CONTRACT_ADDRESS in your env.</p>
                   </div>
                 </div>
               </div>
@@ -91,12 +145,12 @@ export const BuyTokens = () => {
                     value={usdtAmount}
                     onChange={(e) => setUsdtAmount(e.target.value)}
                     placeholder="Enter USDT amount"
-                    disabled={!isConnected}
+                    disabled={!canUseContracts}
                     className="w-full px-4 py-3 pl-12 rounded-xl bg-white/5 border border-white/10 focus:border-[#6C5CE7] outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 </div>
-                {isConnected && (
+                {isConnected && isContractsConfigured && (
                   <p className="text-sm text-gray-400 mt-1">
                     Balance: {parseFloat(stats.usdtBalance).toLocaleString()} USDT
                   </p>
@@ -109,7 +163,7 @@ export const BuyTokens = () => {
                   <button
                     key={amount}
                     onClick={() => setUsdtAmount(amount)}
-                    disabled={!isConnected}
+                    disabled={!canUseContracts}
                     className="flex-1 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#6C5CE7]/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   >
                     ${amount}
@@ -135,7 +189,7 @@ export const BuyTokens = () => {
 
               {/* Action Buttons */}
               <div className="space-y-3">
-                {needsApproval && isConnected && usdtAmount && (
+                {needsApproval && canUseContracts && usdtAmount && (
                   <button
                     onClick={handleApprove}
                     disabled={isApproving || !usdtAmount}
@@ -157,8 +211,9 @@ export const BuyTokens = () => {
 
                 <button
                   onClick={handleBuy}
-                  disabled={!isConnected || !usdtAmount || isBuying || (needsApproval && !isApproving)}
+                  disabled={!canUseContracts || !usdtAmount || isBuying || needsApproval}
                   className="w-full py-4 px-6 rounded-xl bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] hover:shadow-[0_0_40px_rgba(108,92,231,0.6)] transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  title={blockReason || (needsApproval ? 'Approve USDT first' : undefined)}
                 >
                   {isBuying ? (
                     <>
@@ -167,7 +222,7 @@ export const BuyTokens = () => {
                     </>
                   ) : (
                     <>
-                      Buy Tokens
+                      {needsApproval ? 'Approve First' : 'Buy Tokens'}
                       <ArrowRight className="w-5 h-5" />
                     </>
                   )}
@@ -272,15 +327,11 @@ export const BuyTokens = () => {
           <GlassCard>
             <h3 className="font-semibold mb-4">Tier Progress</h3>
             <div className="space-y-3">
-              {[
-                { tier: 1, price: '$0.03', progress: 100 },
-                { tier: 2, price: '$0.05', progress: 56 },
-                { tier: 3, price: '$0.08', progress: 0 },
-              ].map((tier) => (
+              {tierRows.map((tier) => (
                 <div key={tier.tier}>
                   <div className="flex justify-between text-sm mb-1">
                     <span>Tier {tier.tier}</span>
-                    <span className="text-gray-400">{tier.price}</span>
+                    <span className="text-gray-400">${tier.price.toFixed(2)}</span>
                   </div>
                   <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                     <div

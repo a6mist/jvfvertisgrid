@@ -1,5 +1,5 @@
 import { Outlet, NavLink } from "react-router";
-import { LayoutDashboard, Settings, Wallet, FileText, Menu, X } from "lucide-react";
+import { LayoutDashboard, Settings, Wallet, FileText, Menu, X, FilePlus2, ReceiptText } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
@@ -27,6 +27,8 @@ export function Layout() {
     { to: "/ido-admin/controls", icon: Settings, label: "Controls" },
     { to: "/ido-admin/treasury", icon: Wallet, label: "Treasury" },
     { to: "/ido-admin/logs", icon: FileText, label: "Logs" },
+    { to: "/admin", icon: FilePlus2, label: "Create Invoice" },
+    { to: "/admin/invoices", icon: ReceiptText, label: "Manage Invoices" },
   ];
 
   return (

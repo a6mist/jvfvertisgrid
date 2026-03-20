@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Copy, Check, Share2, ExternalLink } from 'lucide-react';
+import { Copy, Check, Share2, ExternalLink, Wallet, Loader2 } from 'lucide-react';
 import { generateInvoiceId, saveInvoice, Invoice } from '../utils/invoiceStorage';
 import { useIdoContract } from '../hooks/useContract';
+import { useWallet } from '../context/WalletContext';
+import { isContractsConfigured } from '../config/contracts';
 import { toast } from 'sonner';
 
 export function InvoiceGenerator() {
@@ -15,6 +17,7 @@ export function InvoiceGenerator() {
   const [copied, setCopied] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { createInvoice } = useIdoContract();
+  const { address, connect, isConnecting } = useWallet();
 
   const TOKEN_RATE = 100; // 1 USDT = 100 WRL tokens
 
@@ -28,8 +31,18 @@ export function InvoiceGenerator() {
   };
 
   const handleGenerateInvoice = async () => {
+    if (!isContractsConfigured) {
+      toast.error('Contract addresses are not configured. Set VITE_IDO_CONTRACT_ADDRESS and VITE_USDT_CONTRACT_ADDRESS');
+      return;
+    }
+
+    if (!address) {
+      toast.error('Connect wallet first to create an on-chain invoice');
+      return;
+    }
+
     if (!amount || !expiryDate || !expiryTime) {
-      alert('Please fill in all required fields');
+      toast.error('Please fill in all required fields');
       return;
     }
 
@@ -72,7 +85,9 @@ export function InvoiceGenerator() {
       toast.success('Invoice created on-chain successfully');
     } catch (error) {
       console.error('Create invoice failed:', error);
-      toast.error('Failed to create invoice on-chain');
+      const message =
+        error instanceof Error ? error.message : 'Failed to create invoice on-chain';
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -96,6 +111,44 @@ export function InvoiceGenerator() {
       </div>
 
       <div className="p-8 rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl mb-8">
+        {!isContractsConfigured && (
+          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30">
+            <p className="text-sm text-red-300 font-semibold mb-1">Contract Setup Required</p>
+            <p className="text-sm text-red-200/90">
+              Missing VITE_IDO_CONTRACT_ADDRESS and/or VITE_USDT_CONTRACT_ADDRESS in your environment.
+            </p>
+            <p className="text-xs text-red-200/80 mt-2">
+              Add them to your .env file and restart the Vite dev server.
+            </p>
+          </div>
+        )}
+
+        <div className="mb-6 p-4 rounded-xl bg-white/5 border border-white/10">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-gray-400 mb-1">Wallet Connection</p>
+              {address ? (
+                <p className="text-white font-mono text-sm">
+                  {address.slice(0, 6)}...{address.slice(-4)}
+                </p>
+              ) : (
+                <p className="text-yellow-400 text-sm">Connect wallet to create invoice on-chain</p>
+              )}
+            </div>
+            {!address && (
+              <button
+                type="button"
+                onClick={connect}
+                disabled={isConnecting}
+                className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2"
+              >
+                {isConnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wallet className="w-4 h-4" />}
+                {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+              </button>
+            )}
+          </div>
+        </div>
+
         <div className="space-y-6">
           {/* Amount */}
           <div>
@@ -187,11 +240,17 @@ export function InvoiceGenerator() {
           {/* Generate Button */}
           <button
             onClick={handleGenerateInvoice}
-            disabled={isSubmitting}
+            disabled={isSubmitting || !address || !isContractsConfigured}
             className="w-full py-4 rounded-xl bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] text-white font-semibold hover:opacity-90 transition-opacity"
             style={{ boxShadow: '0 0 30px rgba(108, 92, 231, 0.3)' }}
           >
-            {isSubmitting ? 'Submitting On-Chain...' : 'Generate Invoice'}
+            {isSubmitting
+              ? 'Submitting On-Chain...'
+              : !isContractsConfigured
+              ? 'Configure Contract Addresses First'
+              : !address
+              ? 'Connect Wallet to Generate Invoice'
+              : 'Generate Invoice'}
           </button>
         </div>
       </div>
