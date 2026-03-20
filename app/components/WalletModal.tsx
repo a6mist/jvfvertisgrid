@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useConnect, useAccount, useDisconnect } from 'wagmi';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/Dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { Wallet, Copy, LogOut, Check, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
