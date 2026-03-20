@@ -30,9 +30,11 @@ export const Navbar = () => {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#6C5CE7] to-[#00F5D4] flex items-center justify-center">
-                <span className="text-xl font-bold">WL</span>
-              </div>
+              <img
+                src="/logo.png"
+                alt="wearelegend"
+                className="w-10 h-10 rounded-xl object-cover"
+              />
               <span className="text-xl font-bold bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] bg-clip-text text-transparent">
                 wearelegend
               </span>

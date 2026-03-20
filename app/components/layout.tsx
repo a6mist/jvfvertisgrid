@@ -1,5 +1,5 @@
 import { Outlet, NavLink } from "react-router";
-import { LayoutDashboard, Settings, Wallet, FileText, Menu, X, Shield } from "lucide-react";
+import { LayoutDashboard, Settings, Wallet, FileText, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
@@ -35,9 +35,11 @@ export function Layout() {
       <header className="sticky top-0 z-50 border-b border-white/10 backdrop-blur-xl bg-[#0B0F1A]/80">
         <div className="flex items-center justify-between px-4 py-4 lg:px-8">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#6C5CE7] to-[#00F5D4] flex items-center justify-center">
-              <Shield className="w-6 h-6 text-white" />
-            </div>
+            <img
+              src="/logo.png"
+              alt="wearelegend"
+              className="w-10 h-10 rounded-xl object-cover"
+            />
             <div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] bg-clip-text text-transparent">
                 wearelegend
