@@ -1,25 +1,66 @@
 import { Outlet, NavLink } from "react-router";
 import { LayoutDashboard, Settings, Wallet, FileText, Menu, X, FilePlus2, ReceiptText } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { toast } from "sonner";
+
+const ALLOWED_IDO_ADMIN_WALLET = "0xEb556534041026eF6f5Fd3223cb2b3Ca7E271ec6";
 
 export function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { address, isConnected } = useAccount();
   const { connectors, connectAsync, isPending } = useConnect();
   const { disconnect } = useDisconnect();
+  const hasShownUnauthorizedToast = useRef(false);
+  const isAllowedWallet =
+    Boolean(address) &&
+    address.toLowerCase() === ALLOWED_IDO_ADMIN_WALLET.toLowerCase();
+  const isUnauthorizedConnected = Boolean(isConnected && address && !isAllowedWallet);
 
-  const walletLabel = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Connect Wallet";
+  const walletLabel = isAllowedWallet && address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Connect Wallet";
+
+  useEffect(() => {
+    if (isUnauthorizedConnected) {
+      disconnect();
+      if (!hasShownUnauthorizedToast.current) {
+        toast.error("Connecting wallet failed");
+        hasShownUnauthorizedToast.current = true;
+      }
+      return;
+    }
+
+    hasShownUnauthorizedToast.current = false;
+  }, [disconnect, isUnauthorizedConnected]);
 
   const handleWalletClick = async () => {
     if (isConnected) {
+      if (!isAllowedWallet) {
+        disconnect();
+        toast.error("Connecting wallet failed");
+        return;
+      }
+
       disconnect();
       return;
     }
 
     if (connectors.length === 0) return;
-    await connectAsync({ connector: connectors[0] });
+
+    try {
+      const result = await connectAsync({ connector: connectors[0] });
+      const connectedAddress = result.accounts?.[0];
+
+      if (
+        !connectedAddress ||
+        connectedAddress.toLowerCase() !== ALLOWED_IDO_ADMIN_WALLET.toLowerCase()
+      ) {
+        disconnect();
+        toast.error("Connecting wallet failed");
+      }
+    } catch {
+      toast.error("Connecting wallet failed");
+    }
   };
 
   const navItems = [
@@ -134,13 +175,22 @@ export function Layout() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Outlet />
-        </motion.div>
+        {isUnauthorizedConnected ? (
+          <div className="max-w-2xl mx-auto p-6 rounded-2xl bg-red-500/10 border border-red-500/30 text-center">
+            <h2 className="text-2xl font-semibold text-red-300 mb-2">Connecting wallet failed</h2>
+            <p className="text-red-200/90 text-sm">
+              Only this wallet can access IDO Admin: {ALLOWED_IDO_ADMIN_WALLET}
+            </p>
+          </div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Outlet />
+          </motion.div>
+        )}
       </main>
     </div>
   );
