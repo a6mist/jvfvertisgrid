@@ -17,6 +17,7 @@ export function Layout() {
     Boolean(address) &&
     address.toLowerCase() === ALLOWED_IDO_ADMIN_WALLET.toLowerCase();
   const isUnauthorizedConnected = Boolean(isConnected && address && !isAllowedWallet);
+  const hasAdminAccess = Boolean(isConnected && isAllowedWallet);
 
   const walletLabel = isAllowedWallet && address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Connect Wallet";
 
@@ -175,11 +176,23 @@ export function Layout() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 lg:px-8">
-        {isUnauthorizedConnected ? (
-          <div className="max-w-2xl mx-auto p-6 rounded-2xl bg-red-500/10 border border-red-500/30 text-center">
-            <h2 className="text-2xl font-semibold text-red-300 mb-2">Connecting wallet failed</h2>
-            <p className="text-red-200/90 text-sm">
-              Only this wallet can access IDO Admin: {ALLOWED_IDO_ADMIN_WALLET}
+        {!hasAdminAccess ? (
+          <div
+            className={`max-w-2xl mx-auto p-6 rounded-2xl border text-center ${
+              isUnauthorizedConnected
+                ? "bg-red-500/10 border-red-500/30"
+                : "bg-white/5 border-white/10"
+            }`}
+          >
+            <h2
+              className={`text-2xl font-semibold mb-2 ${
+                isUnauthorizedConnected ? "text-red-300" : "text-white"
+              }`}
+            >
+              {isUnauthorizedConnected ? "Connecting wallet failed" : "Wallet required"}
+            </h2>
+            <p className={`text-sm ${isUnauthorizedConnected ? "text-red-200/90" : "text-white/70"}`}>
+              Connect this wallet to access IDO Admin: {ALLOWED_IDO_ADMIN_WALLET}
             </p>
           </div>
         ) : (
