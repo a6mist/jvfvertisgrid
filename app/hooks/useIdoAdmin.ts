@@ -1,0 +1,403 @@
+import { useEffect, useMemo, useState } from "react";
+import { useAccount, usePublicClient, useReadContract, useWriteContract } from "wagmi";
+import { formatUnits, isAddress, parseUnits, type Address } from "viem";
+import { IDO_CONTRACT_ADDRESS, isContractsConfigured } from "../config/contracts";
+
+const IDO_ADMIN_ABI = [
+  { name: "saleHasEnd", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "bool" }] },
+  { name: "isBuyPaused", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "bool" }] },
+  { name: "isClaimPaused", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "bool" }] },
+  { name: "startTime", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { name: "endTime", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { name: "released", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "bool" }] },
+  { name: "totalSold", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { name: "totalUsdtCollected", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { name: "currentTier", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { name: "getCurrentPrice", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { name: "MAX_TOKENS", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { name: "getAdmins", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "address[]" }] },
+  { name: "getSigners", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "address[]" }] },
+  { name: "requiredApprovals", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { name: "requestCount", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  {
+    name: "getRequests",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ type: "uint256", name: "start" }, { type: "uint256", name: "count" }],
+    outputs: [
+      {
+        type: "tuple[]",
+        components: [
+          { type: "uint256", name: "id" },
+          { type: "address", name: "token" },
+          { type: "uint256", name: "amount" },
+          { type: "address", name: "to" },
+          { type: "uint256", name: "approvals" },
+          { type: "bool", name: "executed" },
+          { type: "uint256", name: "createdAt" },
+          { type: "string", name: "purpose" },
+        ],
+      },
+      { type: "uint256", name: "nextStart" },
+    ],
+  },
+  {
+    name: "getApprovalStatus",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ type: "uint256", name: "requestId" }],
+    outputs: [
+      {
+        type: "tuple[]",
+        components: [
+          { type: "address", name: "signer" },
+          { type: "bool", name: "approved" },
+        ],
+      },
+    ],
+  },
+  { name: "setBuyPaused", type: "function", stateMutability: "nonpayable", inputs: [{ type: "bool", name: "paused" }], outputs: [] },
+  { name: "setClaimPaused", type: "function", stateMutability: "nonpayable", inputs: [{ type: "bool", name: "paused" }], outputs: [] },
+  { name: "setSaleHasEnd", type: "function", stateMutability: "nonpayable", inputs: [{ type: "bool", name: "hasEnd" }], outputs: [] },
+  {
+    name: "setSaleTimes",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ type: "uint256", name: "_startTime" }, { type: "uint256", name: "_endTime" }],
+    outputs: [],
+  },
+  { name: "release", type: "function", stateMutability: "nonpayable", inputs: [], outputs: [] },
+  { name: "addAdmin", type: "function", stateMutability: "nonpayable", inputs: [{ type: "address", name: "account" }], outputs: [] },
+  { name: "removeAdmin", type: "function", stateMutability: "nonpayable", inputs: [{ type: "address", name: "account" }], outputs: [] },
+  {
+    name: "createWithdrawRequest",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { type: "address", name: "_token" },
+      { type: "uint256", name: "amount" },
+      { type: "address", name: "to" },
+      { type: "string", name: "_purpose" },
+    ],
+    outputs: [],
+  },
+  { name: "approveWithdraw", type: "function", stateMutability: "nonpayable", inputs: [{ type: "uint256", name: "requestId" }], outputs: [] },
+  { name: "withdrawToken", type: "function", stateMutability: "nonpayable", inputs: [{ type: "uint256", name: "requestId" }], outputs: [] },
+] as const;
+
+type ApprovalEntry = { signer: Address; approved: boolean };
+
+type RequestEntry = {
+  id: bigint;
+  token: Address;
+  amount: bigint;
+  to: Address;
+  approvals: bigint;
+  executed: boolean;
+  createdAt: bigint;
+  purpose: string;
+};
+
+export const useIdoAdmin = () => {
+  const { address } = useAccount();
+  const { writeContractAsync } = useWriteContract();
+  const publicClient = usePublicClient();
+
+  const [requests, setRequests] = useState<RequestEntry[]>([]);
+  const [approvalsByRequest, setApprovalsByRequest] = useState<Record<string, ApprovalEntry[]>>({});
+  const [isLoadingRequests, setIsLoadingRequests] = useState(false);
+  const [totalParticipants, setTotalParticipants] = useState(0);
+  const [averagePurchase, setAveragePurchase] = useState("0");
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const { data: isBuyPausedRaw } = useReadContract({
+    address: IDO_CONTRACT_ADDRESS,
+    abi: IDO_ADMIN_ABI,
+    functionName: "isBuyPaused",
+    query: { enabled: isContractsConfigured },
+  });
+  const { data: saleHasEndRaw } = useReadContract({
+    address: IDO_CONTRACT_ADDRESS,
+    abi: IDO_ADMIN_ABI,
+    functionName: "saleHasEnd",
+    query: { enabled: isContractsConfigured },
+  });
+  const { data: isClaimPausedRaw } = useReadContract({
+    address: IDO_CONTRACT_ADDRESS,
+    abi: IDO_ADMIN_ABI,
+    functionName: "isClaimPaused",
+    query: { enabled: isContractsConfigured },
+  });
+  const { data: startTimeRaw } = useReadContract({
+    address: IDO_CONTRACT_ADDRESS,
+    abi: IDO_ADMIN_ABI,
+    functionName: "startTime",
+    query: { enabled: isContractsConfigured },
+  });
+  const { data: endTimeRaw } = useReadContract({
+    address: IDO_CONTRACT_ADDRESS,
+    abi: IDO_ADMIN_ABI,
+    functionName: "endTime",
+    query: { enabled: isContractsConfigured },
+  });
+  const { data: releasedRaw } = useReadContract({
+    address: IDO_CONTRACT_ADDRESS,
+    abi: IDO_ADMIN_ABI,
+    functionName: "released",
+    query: { enabled: isContractsConfigured },
+  });
+  const { data: totalSoldRaw } = useReadContract({
+    address: IDO_CONTRACT_ADDRESS,
+    abi: IDO_ADMIN_ABI,
+    functionName: "totalSold",
+    query: { enabled: isContractsConfigured },
+  });
+  const { data: totalUsdtCollectedRaw } = useReadContract({
+    address: IDO_CONTRACT_ADDRESS,
+    abi: IDO_ADMIN_ABI,
+    functionName: "totalUsdtCollected",
+    query: { enabled: isContractsConfigured },
+  });
+  const { data: currentTierRaw } = useReadContract({
+    address: IDO_CONTRACT_ADDRESS,
+    abi: IDO_ADMIN_ABI,
+    functionName: "currentTier",
+    query: { enabled: isContractsConfigured },
+  });
+  const { data: currentPriceRaw } = useReadContract({
+    address: IDO_CONTRACT_ADDRESS,
+    abi: IDO_ADMIN_ABI,
+    functionName: "getCurrentPrice",
+    query: { enabled: isContractsConfigured },
+  });
+  const { data: maxTokensRaw } = useReadContract({
+    address: IDO_CONTRACT_ADDRESS,
+    abi: IDO_ADMIN_ABI,
+    functionName: "MAX_TOKENS",
+    query: { enabled: isContractsConfigured },
+  });
+  const { data: adminsRaw } = useReadContract({
+    address: IDO_CONTRACT_ADDRESS,
+    abi: IDO_ADMIN_ABI,
+    functionName: "getAdmins",
+    query: { enabled: isContractsConfigured },
+  });
+  const { data: signersRaw } = useReadContract({
+    address: IDO_CONTRACT_ADDRESS,
+    abi: IDO_ADMIN_ABI,
+    functionName: "getSigners",
+    query: { enabled: isContractsConfigured },
+  });
+  const { data: requiredApprovalsRaw } = useReadContract({
+    address: IDO_CONTRACT_ADDRESS,
+    abi: IDO_ADMIN_ABI,
+    functionName: "requiredApprovals",
+    query: { enabled: isContractsConfigured },
+  });
+
+  useEffect(() => {
+    const loadPurchaseStats = async () => {
+      if (!publicClient || !isContractsConfigured) return;
+
+      try {
+        const logs = await publicClient.getLogs({
+          address: IDO_CONTRACT_ADDRESS,
+          fromBlock: 0n,
+          event: {
+            type: "event",
+            name: "TokensPurchased",
+            inputs: [
+              { name: "buyer", type: "address", indexed: true },
+              { name: "tokenAmount", type: "uint256", indexed: false },
+              { name: "usdtSpent", type: "uint256", indexed: false },
+            ],
+          },
+        });
+
+        const buyers = new Set<string>();
+        let totalUsdtSpent = 0n;
+
+        for (const log of logs) {
+          const buyer = String((log.args as Record<string, unknown>).buyer ?? "").toLowerCase();
+          const usdtSpent = BigInt(((log.args as Record<string, unknown>).usdtSpent as bigint) ?? 0n);
+
+          if (buyer) buyers.add(buyer);
+          totalUsdtSpent += usdtSpent;
+        }
+
+        setTotalParticipants(buyers.size);
+        if (logs.length > 0) {
+          setAveragePurchase(formatUnits(totalUsdtSpent / BigInt(logs.length), 6));
+        } else {
+          setAveragePurchase("0");
+        }
+      } catch {
+        setTotalParticipants(0);
+        setAveragePurchase("0");
+      }
+    };
+
+    const loadRequests = async () => {
+      if (!publicClient || !isContractsConfigured) return;
+
+      setIsLoadingRequests(true);
+      try {
+        const response = await publicClient.readContract({
+          address: IDO_CONTRACT_ADDRESS,
+          abi: IDO_ADMIN_ABI,
+          functionName: "getRequests",
+          args: [0n, 100n],
+        });
+
+        const [chainRequests] = response;
+        const parsedRequests = chainRequests as RequestEntry[];
+        setRequests(parsedRequests.sort((a, b) => Number(b.id - a.id)));
+
+        const approvalEntries = await Promise.all(
+          parsedRequests.map(async (req) => {
+            const approvals = (await publicClient.readContract({
+              address: IDO_CONTRACT_ADDRESS,
+              abi: IDO_ADMIN_ABI,
+              functionName: "getApprovalStatus",
+              args: [req.id],
+            })) as ApprovalEntry[];
+
+            return [req.id.toString(), approvals] as const;
+          }),
+        );
+
+        setApprovalsByRequest(Object.fromEntries(approvalEntries));
+      } catch {
+        setRequests([]);
+        setApprovalsByRequest({});
+      } finally {
+        setIsLoadingRequests(false);
+      }
+    };
+
+    loadRequests();
+    loadPurchaseStats();
+  }, [publicClient, refreshKey]);
+
+  const forceRefresh = () => setRefreshKey((v) => v + 1);
+
+  const runWrite = async (
+    functionName:
+      | "setBuyPaused"
+      | "setClaimPaused"
+      | "setSaleHasEnd"
+      | "setSaleTimes"
+      | "release"
+      | "addAdmin"
+      | "removeAdmin"
+      | "createWithdrawRequest"
+      | "approveWithdraw"
+      | "withdrawToken",
+    args: readonly unknown[] = [],
+  ) => {
+    if (!address) throw new Error("Wallet not connected");
+    if (!isContractsConfigured) throw new Error("Contract address not configured");
+
+    const hash = await writeContractAsync({
+      address: IDO_CONTRACT_ADDRESS,
+      abi: IDO_ADMIN_ABI,
+      functionName,
+      args,
+    } as any);
+
+    forceRefresh();
+    return hash;
+  };
+
+  const stats = useMemo(
+    () => ({
+      isBuyPaused: Boolean(isBuyPausedRaw ?? false),
+      isClaimPaused: Boolean(isClaimPausedRaw ?? false),
+      saleHasEnd: Boolean(saleHasEndRaw ?? false),
+      startTime: Number(startTimeRaw ?? 0n),
+      endTime: Number(endTimeRaw ?? 0n),
+      released: Boolean(releasedRaw ?? false),
+      totalSold: totalSoldRaw ? formatUnits(totalSoldRaw, 18) : "0",
+      totalUsdtCollected: totalUsdtCollectedRaw ? formatUnits(totalUsdtCollectedRaw, 6) : "0",
+      currentTier: Number(currentTierRaw ?? 0n),
+      currentPrice: currentPriceRaw ? formatUnits(currentPriceRaw, 6) : "0",
+      maxTokens: maxTokensRaw ? formatUnits(maxTokensRaw, 18) : "0",
+      admins: ((adminsRaw ?? []) as Address[]).map((a) => a.toLowerCase()),
+      signers: ((signersRaw ?? []) as Address[]).map((a) => a.toLowerCase()),
+      requiredApprovals: Number(requiredApprovalsRaw ?? 0n),
+      totalParticipants,
+      averagePurchase,
+    }),
+    [
+      isBuyPausedRaw,
+      isClaimPausedRaw,
+      saleHasEndRaw,
+      startTimeRaw,
+      endTimeRaw,
+      releasedRaw,
+      totalSoldRaw,
+      totalUsdtCollectedRaw,
+      currentTierRaw,
+      currentPriceRaw,
+      maxTokensRaw,
+      adminsRaw,
+      signersRaw,
+      requiredApprovalsRaw,
+      totalParticipants,
+      averagePurchase,
+    ],
+  );
+
+  const connectedRole = useMemo(() => {
+    if (!address) return "Viewer";
+    const lower = address.toLowerCase();
+    if (stats.admins.includes(lower)) return "Admin";
+    if (stats.signers.includes(lower)) return "Signer";
+    return "Viewer";
+  }, [address, stats.admins, stats.signers]);
+
+  const setBuyPaused = async (paused: boolean) => runWrite("setBuyPaused", [paused]);
+  const setClaimPaused = async (paused: boolean) => runWrite("setClaimPaused", [paused]);
+  const setSaleHasEnd = async (hasEnd: boolean) => runWrite("setSaleHasEnd", [hasEnd]);
+  const setSaleTimes = async (start: number, end: number) => runWrite("setSaleTimes", [BigInt(start), BigInt(end)]);
+  const release = async () => runWrite("release", []);
+
+  const addAdmin = async (adminAddress: string) => {
+    if (!isAddress(adminAddress)) throw new Error("Invalid admin address");
+    return runWrite("addAdmin", [adminAddress as Address]);
+  };
+
+  const removeAdmin = async (adminAddress: string) => {
+    if (!isAddress(adminAddress)) throw new Error("Invalid admin address");
+    return runWrite("removeAdmin", [adminAddress as Address]);
+  };
+
+  const createWithdrawRequest = async (token: string, amount: string, to: string, purpose: string) => {
+    if (!isAddress(token)) throw new Error("Invalid token address");
+    if (!isAddress(to)) throw new Error("Invalid recipient address");
+    return runWrite("createWithdrawRequest", [token as Address, parseUnits(amount, 6), to as Address, purpose]);
+  };
+
+  const approveWithdraw = async (requestId: number) => runWrite("approveWithdraw", [BigInt(requestId)]);
+  const withdrawToken = async (requestId: number) => runWrite("withdrawToken", [BigInt(requestId)]);
+
+  return {
+    isContractsConfigured,
+    connectedRole,
+    stats,
+    requests,
+    approvalsByRequest,
+    isLoadingRequests,
+    forceRefresh,
+    setBuyPaused,
+    setClaimPaused,
+    setSaleHasEnd,
+    setSaleTimes,
+    release,
+    addAdmin,
+    removeAdmin,
+    createWithdrawRequest,
+    approveWithdraw,
+    withdrawToken,
+  };
+};
