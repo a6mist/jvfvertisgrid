@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useConnect, useAccount, useDisconnect } from 'wagmi';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/Dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/Dialog';
 import { Wallet, Copy, LogOut, Check, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -127,6 +127,11 @@ export const WalletModal = ({ isOpen, onClose }: WalletModalProps) => {
           <DialogTitle className="text-2xl bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] bg-clip-text text-transparent">
             {isConnected ? 'Connected Wallet' : 'Connect Wallet'}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            {isConnected
+              ? 'View your connected wallet address and disconnect if needed.'
+              : 'Choose a wallet provider to connect securely.'}
+          </DialogDescription>
         </DialogHeader>
 
         {isConnected ? (
