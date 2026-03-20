@@ -78,8 +78,8 @@ const slides: Slide[] = [
       'Each request tracks signer approvals versus required threshold.',
       'Execution is enabled only after threshold consensus is reached.',
     ],
-    note: 'Current UI messaging indicates a 3-of-3 multisig requirement for treasury withdrawals.',
-    calloutTitle: 'Co-sign Flow (3/3 in current treasury view)',
+    note: 'Multisig threshold is contract-configured as M-of-N signers and enforced on withdrawal execution.',
+    calloutTitle: 'Co-sign Flow (M/N configurable threshold)',
     calloutPoints: [
       '1) Signer creates a withdraw request with token, amount, recipient, and purpose.',
       '2) Co-signers independently submit approvals; each approval is immutably logged.',
