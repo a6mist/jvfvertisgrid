@@ -4,6 +4,7 @@ import { Landing } from './pages/Landing';
 import { Dashboard } from './pages/Dashboard';
 import { BuyTokens } from './pages/BuyTokens';
 import { Portfolio } from './pages/Portfolio';
+import { Presentation } from './pages/Presentation';
 import { HomePage } from './components/HomePage';
 import { AdminLayout } from './components/AdminLayout';
 import { InvoiceGenerator } from './components/InvoiceGenerator';
@@ -24,6 +25,7 @@ export const router = createBrowserRouter([
       { path: 'dashboard', Component: Dashboard },
       { path: 'buy', Component: BuyTokens },
       { path: 'portfolio', Component: Portfolio },
+      { path: 'presentation', Component: Presentation },
     ],
   },
   {

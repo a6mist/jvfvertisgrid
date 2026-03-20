@@ -19,6 +19,7 @@ export const Navbar = () => {
     { path: '/dashboard', label: 'Dashboard' },
     { path: '/buy', label: 'Buy Tokens' },
     { path: '/portfolio', label: 'Portfolio' },
+    { path: '/presentation', label: 'Presentation' },
   ];
 
   const isActive = (path: string) => location.pathname === path;
