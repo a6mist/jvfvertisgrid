@@ -6,6 +6,8 @@ import { useWallet } from '../context/WalletContext';
 import { isContractsConfigured } from '../config/contracts';
 import { toast } from 'sonner';
 
+const ALLOWED_IDO_ADMIN_WALLET = '0xEb556534041026eF6f5Fd3223cb2b3Ca7E271ec6';
+
 export function InvoiceGenerator() {
   const [amount, setAmount] = useState('');
   const [tokenAmount, setTokenAmount] = useState('');
@@ -18,6 +20,9 @@ export function InvoiceGenerator() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { createInvoice } = useIdoContract();
   const { address, connect, isConnecting } = useWallet();
+  const isAllowedWallet =
+    Boolean(address) &&
+    address.toLowerCase() === ALLOWED_IDO_ADMIN_WALLET.toLowerCase();
 
   const TOKEN_RATE = 100; // 1 USDT = 100 WRL tokens
 
@@ -31,6 +36,11 @@ export function InvoiceGenerator() {
   };
 
   const handleGenerateInvoice = async () => {
+    if (!isAllowedWallet) {
+      toast.error('Connecting wallet failed');
+      return;
+    }
+
     if (!isContractsConfigured) {
       toast.error('Contract addresses are not configured. Set VITE_IDO_CONTRACT_ADDRESS and VITE_USDT_CONTRACT_ADDRESS');
       return;
@@ -102,6 +112,39 @@ export function InvoiceGenerator() {
   const invoiceUrl = generatedInvoice 
     ? `${window.location.origin}/pay/${generatedInvoice.id}`
     : '';
+
+  if (!isAllowedWallet) {
+    return (
+      <div className="max-w-3xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-white mb-2">Create Invoice</h1>
+          <p className="text-gray-400">Generate a new payment invoice for crypto transactions</p>
+        </div>
+
+        <div className="p-8 rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl">
+          <div className={`p-4 rounded-xl border ${address ? 'bg-red-500/10 border-red-500/30' : 'bg-white/5 border-white/10'}`}>
+            <p className={`text-sm font-semibold mb-1 ${address ? 'text-red-300' : 'text-white'}`}>
+              {address ? 'Connecting wallet failed' : 'Wallet required'}
+            </p>
+            <p className={`text-sm ${address ? 'text-red-200/90' : 'text-white/70'}`}>
+              Connect this wallet to access Admin Panel: {ALLOWED_IDO_ADMIN_WALLET}
+            </p>
+            {!address && (
+              <button
+                type="button"
+                onClick={connect}
+                disabled={isConnecting}
+                className="mt-4 px-4 py-2 rounded-lg bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2"
+              >
+                {isConnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wallet className="w-4 h-4" />}
+                {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto">

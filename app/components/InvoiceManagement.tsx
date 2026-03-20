@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
-import { Copy, Check, ExternalLink, Trash2, Clock, CheckCircle, XCircle, Search, Filter, Loader2, RefreshCw } from 'lucide-react';
+import { Copy, Check, ExternalLink, Trash2, Clock, CheckCircle, XCircle, Search, Filter, Loader2, RefreshCw, Wallet } from 'lucide-react';
 import { getInvoices, deleteInvoice, checkExpiredInvoices, Invoice, InvoiceStatus, saveInvoice } from '../utils/invoiceStorage';
 import { useIdoContract } from '../hooks/useContract';
 import { isContractsConfigured } from '../config/contracts';
+import { useWallet } from '../context/WalletContext';
+
+const ALLOWED_IDO_ADMIN_WALLET = '0xEb556534041026eF6f5Fd3223cb2b3Ca7E271ec6';
 
 export function InvoiceManagement() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -15,10 +18,19 @@ export function InvoiceManagement() {
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [syncMap, setSyncMap] = useState<Record<string, boolean>>({});
   const { getOnChainInvoice, getInvoicePaymentTxHash } = useIdoContract();
+  const { address, connect, isConnecting } = useWallet();
+  const isAllowedWallet =
+    Boolean(address) &&
+    address.toLowerCase() === ALLOWED_IDO_ADMIN_WALLET.toLowerCase();
 
   useEffect(() => {
+    if (!isAllowedWallet) {
+      setIsLoading(false);
+      return;
+    }
+
     void loadInvoices();
-  }, []);
+  }, [isAllowedWallet]);
 
   const loadInvoices = async () => {
     setIsLoading(true);
@@ -146,6 +158,37 @@ export function InvoiceManagement() {
     expired: invoices.filter(i => i.status === 'expired').length,
     totalAmount: invoices.reduce((sum, i) => i.status === 'paid' ? sum + (i.usdtSpent ?? i.amount) : sum, 0),
   };
+
+  if (!isAllowedWallet) {
+    return (
+      <div>
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-white mb-2">Invoice Management</h1>
+          <p className="text-gray-400">Monitor and manage all payment invoices</p>
+        </div>
+
+        <div className={`p-4 rounded-xl border ${address ? 'bg-red-500/10 border-red-500/30' : 'bg-white/5 border-white/10'}`}>
+          <p className={`text-sm font-semibold mb-1 ${address ? 'text-red-300' : 'text-white'}`}>
+            {address ? 'Connecting wallet failed' : 'Wallet required'}
+          </p>
+          <p className={`text-sm ${address ? 'text-red-200/90' : 'text-white/70'}`}>
+            Connect this wallet to access Admin Panel: {ALLOWED_IDO_ADMIN_WALLET}
+          </p>
+          {!address && (
+            <button
+              type="button"
+              onClick={connect}
+              disabled={isConnecting}
+              className="mt-4 px-4 py-2 rounded-lg bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2"
+            >
+              {isConnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wallet className="w-4 h-4" />}
+              {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
