@@ -4,6 +4,7 @@ import { Play, Pause, Clock, Send, UserPlus, UserMinus, AlertCircle } from "luci
 import { ToggleSwitch } from "../components/toggle-switch";
 import { ConfirmModal } from "../components/confirm-modal";
 import { useIdoAdmin } from "../hooks/useIdoAdmin";
+import { useWlgTokenAdmin } from "../hooks/useWlgTokenAdmin";
 import { toast } from "sonner";
 
 export function Controls() {
@@ -17,6 +18,15 @@ export function Controls() {
     addAdmin,
     removeAdmin,
   } = useIdoAdmin();
+  const {
+    isTokenConfigured,
+    stats: tokenStats,
+    mint,
+    pause,
+    unpause,
+    setBurnEnabled,
+    setPauseEnabled,
+  } = useWlgTokenAdmin();
 
   const [buyPaused, setBuyPaused] = useState(false);
   const [claimPaused, setClaimPaused] = useState(false);
@@ -26,6 +36,8 @@ export function Controls() {
   const [releaseModalOpen, setReleaseModalOpen] = useState(false);
   const [removeAdminModal, setRemoveAdminModal] = useState<string | null>(null);
   const [newAdminAddress, setNewAdminAddress] = useState("");
+  const [mintTo, setMintTo] = useState("");
+  const [mintAmount, setMintAmount] = useState("");
 
   useEffect(() => {
     setBuyPaused(stats.isBuyPaused);
@@ -131,6 +143,58 @@ export function Controls() {
       console.error(error);
       setSaleHasEndState(prev);
       toast.error("Failed to update sale end mode");
+    }
+  };
+
+  const handleMint = async () => {
+    try {
+      await mint(mintTo, mintAmount);
+      toast.success("Mint transaction submitted");
+      setMintTo("");
+      setMintAmount("");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to mint token");
+    }
+  };
+
+  const handlePauseToken = async () => {
+    try {
+      await pause();
+      toast.success("Token pause transaction submitted");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to pause token");
+    }
+  };
+
+  const handleUnpauseToken = async () => {
+    try {
+      await unpause();
+      toast.success("Token unpause transaction submitted");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to unpause token");
+    }
+  };
+
+  const handleSetBurnEnabled = async (enabled: boolean) => {
+    try {
+      await setBurnEnabled(enabled);
+      toast.success(`Burn ${enabled ? "enabled" : "disabled"}`);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to update burn setting");
+    }
+  };
+
+  const handleSetPauseEnabled = async (enabled: boolean) => {
+    try {
+      await setPauseEnabled(enabled);
+      toast.success(`Pause control ${enabled ? "enabled" : "disabled"}`);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to update pause setting");
     }
   };
 
@@ -313,6 +377,104 @@ export function Controls() {
               </div>
             ))}
           </div>
+        </div>
+      </GlassCard>
+
+      {/* Token Contract Controls */}
+      <GlassCard>
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-white">WLG Token Contract</h3>
+            <p className="text-sm text-white/60">Read and execute token admin functions from /ido-admin</p>
+          </div>
+
+          {!isTokenConfigured ? (
+            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-sm text-red-300">
+              Missing VITE_TOKEN_CONTRACT_ADDRESS in environment config.
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                  <p className="text-xs text-white/60 mb-1">Total Supply</p>
+                  <p className="text-white">{Number(tokenStats.totalSupply).toLocaleString()} WLG</p>
+                </div>
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                  <p className="text-xs text-white/60 mb-1">IDO Inventory</p>
+                  <p className="text-white">{Number(tokenStats.idoInventory).toLocaleString()} WLG</p>
+                </div>
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                  <p className="text-xs text-white/60 mb-1">Token Status</p>
+                  <p className="text-white">{tokenStats.paused ? "Paused" : "Active"}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-sm text-white/80">
+                  Admin Role: {tokenStats.hasAdminRole ? "Yes" : "No"}
+                </div>
+                <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-sm text-white/80">
+                  Minter Role: {tokenStats.hasMinterRole ? "Yes" : "No"}
+                </div>
+                <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-sm text-white/80">
+                  Pauser Role: {tokenStats.hasPauserRole ? "Yes" : "No"}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <button
+                  onClick={handlePauseToken}
+                  className="px-4 py-3 rounded-xl bg-[#6C5CE7]/20 text-[#6C5CE7] border border-[#6C5CE7]/30 hover:bg-[#6C5CE7]/30 transition-all"
+                >
+                  Pause Token
+                </button>
+                <button
+                  onClick={handleUnpauseToken}
+                  className="px-4 py-3 rounded-xl bg-[#00F5D4]/20 text-[#00F5D4] border border-[#00F5D4]/30 hover:bg-[#00F5D4]/30 transition-all"
+                >
+                  Unpause Token
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <button
+                  onClick={() => handleSetBurnEnabled(!tokenStats.burnEnabled)}
+                  className="px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 hover:bg-white/15 transition-all"
+                >
+                  {tokenStats.burnEnabled ? "Disable Burn" : "Enable Burn"}
+                </button>
+                <button
+                  onClick={() => handleSetPauseEnabled(!tokenStats.pauseEnabled)}
+                  className="px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 hover:bg-white/15 transition-all"
+                >
+                  {tokenStats.pauseEnabled ? "Disable Pause Control" : "Enable Pause Control"}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <input
+                  type="text"
+                  value={mintTo}
+                  onChange={(e) => setMintTo(e.target.value)}
+                  placeholder="Mint recipient (0x...)"
+                  className="md:col-span-2 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/30 focus:border-[#6C5CE7] focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/50 font-mono text-sm"
+                />
+                <input
+                  type="text"
+                  value={mintAmount}
+                  onChange={(e) => setMintAmount(e.target.value)}
+                  placeholder="Amount (WLG)"
+                  className="px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/30 focus:border-[#6C5CE7] focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/50"
+                />
+              </div>
+              <button
+                onClick={handleMint}
+                className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] text-white hover:shadow-[0_0_30px_rgba(108,92,231,0.5)] transition-all"
+              >
+                Mint WLG
+              </button>
+            </>
+          )}
         </div>
       </GlassCard>
 

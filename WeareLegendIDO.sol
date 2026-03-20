@@ -536,7 +536,7 @@ contract WeareLegendIDO is Ownable, ReentrancyGuard {
         address to,
         string calldata purpose
     ) external onlyAdmin {
-        require(tokenAddress_ != address(0), "Invalid token");
+        require(token_ != address(0), "Invalid token");
         require(to != address(0), "Invalid recipient");
         require(amount > 0, "Invalid amount");
 
@@ -552,7 +552,7 @@ contract WeareLegendIDO is Ownable, ReentrancyGuard {
             purpose: purpose
         });
 
-        emit RequestCreated(id, tokenAddress_, amount, to, purpose);
+        emit RequestCreated(id, token_, amount, to, purpose);
     }
 
     function approveWithdraw(uint256 requestId) external onlySigner {
