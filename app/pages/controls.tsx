@@ -9,6 +9,7 @@ import { toast } from "sonner";
 
 export function Controls() {
   const {
+    connectedRole,
     stats,
     setBuyPaused: setBuyPausedOnChain,
     setClaimPaused: setClaimPausedOnChain,
@@ -17,6 +18,9 @@ export function Controls() {
     release,
     addAdmin,
     removeAdmin,
+    addSigner,
+    removeSigner,
+    setRequiredApprovals,
   } = useIdoAdmin();
   const {
     isTokenConfigured,
@@ -35,7 +39,10 @@ export function Controls() {
   const [endTime, setEndTime] = useState("2026-04-21T10:00");
   const [releaseModalOpen, setReleaseModalOpen] = useState(false);
   const [removeAdminModal, setRemoveAdminModal] = useState<string | null>(null);
+  const [removeSignerModal, setRemoveSignerModal] = useState<string | null>(null);
   const [newAdminAddress, setNewAdminAddress] = useState("");
+  const [newSignerAddress, setNewSignerAddress] = useState("");
+  const [requiredApprovalsInput, setRequiredApprovalsInput] = useState("1");
   const [mintTo, setMintTo] = useState("");
   const [mintAmount, setMintAmount] = useState("");
 
@@ -50,9 +57,11 @@ export function Controls() {
     if (stats.endTime > 0) {
       setEndTime(new Date(stats.endTime * 1000).toISOString().slice(0, 16));
     }
-  }, [stats.isBuyPaused, stats.isClaimPaused, stats.saleHasEnd, stats.startTime, stats.endTime]);
+    setRequiredApprovalsInput(String(stats.requiredApprovals || 1));
+  }, [stats.isBuyPaused, stats.isClaimPaused, stats.saleHasEnd, stats.startTime, stats.endTime, stats.requiredApprovals]);
 
   const admins = stats.admins.map((address) => ({ address, addedDate: "On-chain" }));
+  const signers = stats.signers.map((address) => ({ address, addedDate: "On-chain" }));
 
   const handleReleaseTokens = async () => {
     try {
@@ -86,6 +95,41 @@ export function Controls() {
     } catch (error) {
       console.error(error);
       toast.error("Failed to remove admin");
+    }
+  };
+
+  const handleAddSigner = async () => {
+    if (newSignerAddress) {
+      try {
+        await addSigner(newSignerAddress);
+        toast.success("Add signer transaction submitted");
+        setNewSignerAddress("");
+      } catch (error) {
+        console.error(error);
+        toast.error("Failed to add signer");
+      }
+    }
+  };
+
+  const handleRemoveSigner = async (address: string) => {
+    try {
+      await removeSigner(address);
+      toast.success("Remove signer transaction submitted");
+      setRemoveSignerModal(null);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to remove signer");
+    }
+  };
+
+  const handleSetRequiredApprovals = async () => {
+    try {
+      const value = Number(requiredApprovalsInput);
+      await setRequiredApprovals(value);
+      toast.success("Required approvals update submitted");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to update required approvals");
     }
   };
 
@@ -380,6 +424,89 @@ export function Controls() {
         </div>
       </GlassCard>
 
+      {/* Signer Management */}
+      <GlassCard>
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#00F5D4]/20 flex items-center justify-center">
+              <UserPlus className="w-5 h-5 text-[#00F5D4]" />
+            </div>
+            <div>
+              <h3 className="text-white">Signer Management</h3>
+              <p className="text-sm text-white/60">Manage co-signer wallets and approval threshold</p>
+            </div>
+          </div>
+
+          {connectedRole === "Owner" ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  value={requiredApprovalsInput}
+                  onChange={(e) => setRequiredApprovalsInput(e.target.value)}
+                  placeholder="Required approvals"
+                  className="px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/30 focus:border-[#6C5CE7] focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/50"
+                />
+                <div className="md:col-span-2">
+                  <button
+                    onClick={handleSetRequiredApprovals}
+                    className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] text-white hover:shadow-[0_0_30px_rgba(108,92,231,0.5)] transition-all"
+                  >
+                    Update Required Approvals
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newSignerAddress}
+                  onChange={(e) => setNewSignerAddress(e.target.value)}
+                  placeholder="0x... signer wallet"
+                  className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/30 focus:border-[#6C5CE7] focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/50 font-mono text-sm"
+                />
+                <button
+                  onClick={handleAddSigner}
+                  className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#00F5D4] to-[#6C5CE7] text-white hover:shadow-[0_0_30px_rgba(0,245,212,0.35)] transition-all flex items-center gap-2"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Add Signer
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-sm text-amber-200">
+              Signer management is owner-only. Connect the owner wallet to add/remove signers or change required approvals.
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <p className="text-sm text-white/60">
+              Current Signers ({signers.length}) | Required Approvals ({stats.requiredApprovals})
+            </p>
+            {signers.map((signer) => (
+              <div
+                key={signer.address}
+                className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10"
+              >
+                <div>
+                  <p className="text-white font-mono text-sm">{signer.address}</p>
+                  <p className="text-xs text-white/50">Added on {signer.addedDate}</p>
+                </div>
+                <button
+                  onClick={() => setRemoveSignerModal(signer.address)}
+                  disabled={connectedRole !== "Owner"}
+                  className="p-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all"
+                >
+                  <UserMinus className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </GlassCard>
+
       {/* Token Contract Controls */}
       <GlassCard>
         <div className="space-y-6">
@@ -497,6 +624,18 @@ export function Controls() {
           title="Remove Admin"
           description={`Are you sure you want to remove admin access for ${removeAdminModal}?`}
           confirmText="Remove Admin"
+          variant="destructive"
+        />
+      )}
+
+      {removeSignerModal && (
+        <ConfirmModal
+          isOpen={true}
+          onClose={() => setRemoveSignerModal(null)}
+          onConfirm={() => handleRemoveSigner(removeSignerModal)}
+          title="Remove Signer"
+          description={`Are you sure you want to remove signer access for ${removeSignerModal}?`}
+          confirmText="Remove Signer"
           variant="destructive"
         />
       )}

@@ -1,17 +1,28 @@
 import { useEffect, useState } from "react";
 import { GlassCard } from "../components/glass-card";
-import { Filter, ShoppingCart, Send, TrendingUp, CheckCircle, Play } from "lucide-react";
+import { Filter, ShoppingCart, Send, TrendingUp, CheckCircle, Play, UserPlus, UserMinus, SlidersHorizontal } from "lucide-react";
 import { usePublicClient } from "wagmi";
 import { formatUnits } from "viem";
 import { IDO_CONTRACT_ADDRESS, isContractsConfigured } from "../config/contracts";
 
 interface ActivityEvent {
   id: number;
-  type: "TokensPurchased" | "TokensClaimed" | "TierPurchase" | "RequestCreated" | "Approved" | "Executed";
+  type:
+    | "TokensPurchased"
+    | "TokensClaimed"
+    | "TierPurchase"
+    | "RequestCreated"
+    | "Approved"
+    | "Executed"
+    | "SignerAdded"
+    | "SignerRemoved"
+    | "RequiredApprovalsUpdated";
   user: string;
   amount?: string;
   token?: string;
   tier?: number;
+  previousApprovals?: number;
+  newApprovals?: number;
   timestamp: string;
 }
 
@@ -86,6 +97,24 @@ export function Logs() {
                 { name: "to", type: "address", indexed: true },
               ],
             },
+            {
+              type: "event",
+              name: "SignerAdded",
+              inputs: [{ name: "account", type: "address", indexed: true }],
+            },
+            {
+              type: "event",
+              name: "SignerRemoved",
+              inputs: [{ name: "account", type: "address", indexed: true }],
+            },
+            {
+              type: "event",
+              name: "RequiredApprovalsUpdated",
+              inputs: [
+                { name: "previousRequiredApprovals", type: "uint256", indexed: false },
+                { name: "newRequiredApprovals", type: "uint256", indexed: false },
+              ],
+            },
           ],
         });
 
@@ -145,6 +174,35 @@ export function Logs() {
               };
             }
 
+            if (log.eventName === "SignerAdded") {
+              return {
+                id: index + 1,
+                type: "SignerAdded" as const,
+                user: String(args.account ?? ""),
+                timestamp,
+              };
+            }
+
+            if (log.eventName === "SignerRemoved") {
+              return {
+                id: index + 1,
+                type: "SignerRemoved" as const,
+                user: String(args.account ?? ""),
+                timestamp,
+              };
+            }
+
+            if (log.eventName === "RequiredApprovalsUpdated") {
+              return {
+                id: index + 1,
+                type: "RequiredApprovalsUpdated" as const,
+                user: "Owner",
+                previousApprovals: Number(args.previousRequiredApprovals ?? 0n),
+                newApprovals: Number(args.newRequiredApprovals ?? 0n),
+                timestamp,
+              };
+            }
+
             return {
               id: index + 1,
               type: "Executed" as const,
@@ -173,6 +231,9 @@ export function Logs() {
     { value: "RequestCreated", label: "Requests" },
     { value: "Approved", label: "Approvals" },
     { value: "Executed", label: "Executions" },
+    { value: "SignerAdded", label: "Signer Added" },
+    { value: "SignerRemoved", label: "Signer Removed" },
+    { value: "RequiredApprovalsUpdated", label: "Threshold Updates" },
   ];
 
   const filteredEvents =
@@ -192,6 +253,12 @@ export function Logs() {
         return CheckCircle;
       case "Executed":
         return Play;
+      case "SignerAdded":
+        return UserPlus;
+      case "SignerRemoved":
+        return UserMinus;
+      case "RequiredApprovalsUpdated":
+        return SlidersHorizontal;
       default:
         return Filter;
     }
@@ -211,6 +278,12 @@ export function Logs() {
         return "from-[#00F5D4] to-[#6C5CE7]";
       case "Executed":
         return "from-[#6C5CE7] to-[#00F5D4]";
+      case "SignerAdded":
+        return "from-[#00F5D4] to-[#33FFE8]";
+      case "SignerRemoved":
+        return "from-[#FF6B6B] to-[#FF8787]";
+      case "RequiredApprovalsUpdated":
+        return "from-[#F59E0B] to-[#FCD34D]";
       default:
         return "from-white to-white";
     }
@@ -230,6 +303,12 @@ export function Logs() {
         return `Approved withdrawal request`;
       case "Executed":
         return `Executed withdrawal of ${event.amount} ${event.token}`;
+      case "SignerAdded":
+        return "Added signer wallet";
+      case "SignerRemoved":
+        return "Removed signer wallet";
+      case "RequiredApprovalsUpdated":
+        return `Updated required approvals from ${event.previousApprovals} to ${event.newApprovals}`;
       default:
         return "Unknown event";
     }
@@ -261,7 +340,7 @@ export function Logs() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <GlassCard className="text-center">
           <p className="text-sm text-white/60 mb-1">Total Events</p>
           <p className="text-2xl text-white">{events.length}</p>
@@ -282,6 +361,12 @@ export function Logs() {
           <p className="text-sm text-white/60 mb-1">Executions</p>
           <p className="text-2xl text-white">
             {events.filter((e) => e.type === "Executed").length}
+          </p>
+        </GlassCard>
+        <GlassCard className="text-center">
+          <p className="text-sm text-white/60 mb-1">Signer Changes</p>
+          <p className="text-2xl text-white">
+            {events.filter((e) => e.type === "SignerAdded" || e.type === "SignerRemoved").length}
           </p>
         </GlassCard>
       </div>

@@ -115,7 +115,7 @@ contract WeareLegendTokenUpgradeable is
     }
 
     /// @dev Required by UUPS; restricted to UPGRADER_ROLE (multisig-controlled).
-    function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {
+    function _authorizeUpgrade(address newImplementation) internal view override onlyRole(UPGRADER_ROLE) {
         require(newImplementation != address(0), "Invalid implementation");
     }
 

@@ -113,6 +113,9 @@ contract WeareLegendIDO is Ownable, ReentrancyGuard {
 
     event AdminAdded(address indexed account);
     event AdminRemoved(address indexed account);
+    event SignerAdded(address indexed account);
+    event SignerRemoved(address indexed account);
+    event RequiredApprovalsUpdated(uint256 previousRequiredApprovals, uint256 newRequiredApprovals);
     event Deposit(address indexed sender, uint256 amount);
 
     /// @notice Emitted when tokens are deposited via fundTokenInventory.
@@ -528,6 +531,44 @@ contract WeareLegendIDO is Ownable, ReentrancyGuard {
 
     function getAdmins() external view returns (address[] memory) {
         return admins;
+    }
+
+    function setRequiredApprovals(uint256 newRequiredApprovals) external onlyOwner {
+        require(newRequiredApprovals > 0, "Required approvals is zero");
+        require(newRequiredApprovals <= signers.length, "Required > signers");
+
+        uint256 previousRequiredApprovals = requiredApprovals;
+        requiredApprovals = newRequiredApprovals;
+
+        emit RequiredApprovalsUpdated(previousRequiredApprovals, newRequiredApprovals);
+    }
+
+    function addSigner(address account) external onlyOwner {
+        require(account != address(0), "Invalid address");
+        require(!isSigner(account), "Already signer");
+
+        signers.push(account);
+        emit SignerAdded(account);
+    }
+
+    function removeSigner(address account) external onlyOwner {
+        require(isSigner(account), "Not signer");
+        require(signers.length > 1, "At least one signer required");
+
+        for (uint256 i = 0; i < signers.length; i++) {
+            if (signers[i] == account) {
+                signers[i] = signers[signers.length - 1];
+                signers.pop();
+                emit SignerRemoved(account);
+                break;
+            }
+        }
+
+        if (requiredApprovals > signers.length) {
+            uint256 previousRequiredApprovals = requiredApprovals;
+            requiredApprovals = signers.length;
+            emit RequiredApprovalsUpdated(previousRequiredApprovals, requiredApprovals);
+        }
     }
 
     function createWithdrawRequest(

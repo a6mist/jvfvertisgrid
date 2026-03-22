@@ -15,6 +15,7 @@ const IDO_ADMIN_ABI = [
   { name: "currentTier", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { name: "getCurrentPrice", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { name: "MAX_TOKENS", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { name: "owner", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
   { name: "getAdmins", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "address[]" }] },
   { name: "getSigners", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "address[]" }] },
   { name: "requiredApprovals", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
@@ -69,6 +70,15 @@ const IDO_ADMIN_ABI = [
   { name: "release", type: "function", stateMutability: "nonpayable", inputs: [], outputs: [] },
   { name: "addAdmin", type: "function", stateMutability: "nonpayable", inputs: [{ type: "address", name: "account" }], outputs: [] },
   { name: "removeAdmin", type: "function", stateMutability: "nonpayable", inputs: [{ type: "address", name: "account" }], outputs: [] },
+  { name: "addSigner", type: "function", stateMutability: "nonpayable", inputs: [{ type: "address", name: "account" }], outputs: [] },
+  { name: "removeSigner", type: "function", stateMutability: "nonpayable", inputs: [{ type: "address", name: "account" }], outputs: [] },
+  {
+    name: "setRequiredApprovals",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ type: "uint256", name: "newRequiredApprovals" }],
+    outputs: [],
+  },
   {
     name: "createWithdrawRequest",
     type: "function",
@@ -174,6 +184,12 @@ export const useIdoAdmin = () => {
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ADMIN_ABI,
     functionName: "MAX_TOKENS",
+    query: { enabled: isContractsConfigured },
+  });
+  const { data: ownerRaw } = useReadContract({
+    address: IDO_CONTRACT_ADDRESS,
+    abi: IDO_ADMIN_ABI,
+    functionName: "owner",
     query: { enabled: isContractsConfigured },
   });
   const { data: adminsRaw } = useReadContract({
@@ -290,6 +306,9 @@ export const useIdoAdmin = () => {
       | "release"
       | "addAdmin"
       | "removeAdmin"
+      | "addSigner"
+      | "removeSigner"
+      | "setRequiredApprovals"
       | "createWithdrawRequest"
       | "approveWithdraw"
       | "withdrawToken",
@@ -322,6 +341,7 @@ export const useIdoAdmin = () => {
       currentTier: Number(currentTierRaw ?? 0n),
       currentPrice: currentPriceRaw ? formatUnits(currentPriceRaw, 6) : "0",
       maxTokens: maxTokensRaw ? formatUnits(maxTokensRaw, 18) : "0",
+      owner: ownerRaw ? String(ownerRaw).toLowerCase() : "",
       admins: ((adminsRaw ?? []) as Address[]).map((a) => a.toLowerCase()),
       signers: ((signersRaw ?? []) as Address[]).map((a) => a.toLowerCase()),
       requiredApprovals: Number(requiredApprovalsRaw ?? 0n),
@@ -340,6 +360,7 @@ export const useIdoAdmin = () => {
       currentTierRaw,
       currentPriceRaw,
       maxTokensRaw,
+      ownerRaw,
       adminsRaw,
       signersRaw,
       requiredApprovalsRaw,
@@ -351,10 +372,11 @@ export const useIdoAdmin = () => {
   const connectedRole = useMemo(() => {
     if (!address) return "Viewer";
     const lower = address.toLowerCase();
+    if (stats.owner && stats.owner === lower) return "Owner";
     if (stats.admins.includes(lower)) return "Admin";
     if (stats.signers.includes(lower)) return "Signer";
     return "Viewer";
-  }, [address, stats.admins, stats.signers]);
+  }, [address, stats.owner, stats.admins, stats.signers]);
 
   const setBuyPaused = async (paused: boolean) => runWrite("setBuyPaused", [paused]);
   const setClaimPaused = async (paused: boolean) => runWrite("setClaimPaused", [paused]);
@@ -370,6 +392,23 @@ export const useIdoAdmin = () => {
   const removeAdmin = async (adminAddress: string) => {
     if (!isAddress(adminAddress)) throw new Error("Invalid admin address");
     return runWrite("removeAdmin", [adminAddress as Address]);
+  };
+
+  const addSigner = async (signerAddress: string) => {
+    if (!isAddress(signerAddress)) throw new Error("Invalid signer address");
+    return runWrite("addSigner", [signerAddress as Address]);
+  };
+
+  const removeSigner = async (signerAddress: string) => {
+    if (!isAddress(signerAddress)) throw new Error("Invalid signer address");
+    return runWrite("removeSigner", [signerAddress as Address]);
+  };
+
+  const setRequiredApprovals = async (value: number) => {
+    if (!Number.isInteger(value) || value <= 0) {
+      throw new Error("Required approvals must be a positive integer");
+    }
+    return runWrite("setRequiredApprovals", [BigInt(value)]);
   };
 
   const createWithdrawRequest = async (token: string, amount: string, to: string, purpose: string) => {
@@ -396,6 +435,9 @@ export const useIdoAdmin = () => {
     release,
     addAdmin,
     removeAdmin,
+    addSigner,
+    removeSigner,
+    setRequiredApprovals,
     createWithdrawRequest,
     approveWithdraw,
     withdrawToken,
