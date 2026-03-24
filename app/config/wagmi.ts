@@ -17,13 +17,13 @@ export const config = createConfig({
       metadata: {
         name: 'wearelegend',
         description: 'Web3 IDO Launchpad',
-        url: 'https://wearelegend.io',
-        icons: ['https://wearelegend.io/icon.png']
+        url: 'https://www.wearelegend.online',
+        icons: ['https://www.wearelegend.online/logo.png']
       }
     }),
     coinbaseWallet({
       appName: 'wearelegend',
-      appLogoUrl: 'https://wearelegend.io/icon.png'
+      appLogoUrl: 'https://www.wearelegend.online/logo.png'
     })
   ],
   transports: {
