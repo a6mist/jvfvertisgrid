@@ -103,6 +103,13 @@ const IDO_ABI = [
     outputs: [],
   },
   {
+    name: 'getAdmins',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'address[]' }],
+  },
+  {
     name: 'simulateBuyWithUSDT',
     type: 'function',
     stateMutability: 'view',
@@ -571,6 +578,7 @@ export const useIdoContract = () => {
     if (!address) throw new Error('Wallet not connected');
     if (!isContractsConfigured) throw new Error('Contract addresses are not configured');
     if (!publicClient) throw new Error('Public client not available');
+    if (!readClient) throw new Error('Read client not available');
 
     const recipient = params.recipientWallet?.trim();
     if (recipient && !isAddress(recipient)) {
@@ -582,19 +590,41 @@ export const useIdoContract = () => {
       throw new Error('Invalid expiry date');
     }
 
+    const admins = (await readClient.readContract({
+      address: IDO_CONTRACT_ADDRESS,
+      abi: IDO_ABI,
+      functionName: 'getAdmins',
+    })) as Address[];
+
+    const isAdmin = admins.some((admin) => admin.toLowerCase() === address.toLowerCase());
+    if (!isAdmin) {
+      throw new Error('Connected wallet is not an on-chain admin for invoice creation');
+    }
+
+    const createArgs = [
+      params.invoiceId,
+      parseUnits(params.usdtAmount, 6),
+      parseUnits(params.tokenAmount, 18),
+      BigInt(expiryTimestamp),
+      (recipient || '0x0000000000000000000000000000000000000000') as Address,
+      params.notes || '',
+    ] as const;
+
+    // Preflight the tx so users do not get a guaranteed-fail MetaMask request.
+    await readClient.simulateContract({
+      address: IDO_CONTRACT_ADDRESS,
+      abi: IDO_ABI,
+      functionName: 'createInvoice',
+      args: createArgs,
+      account: address as Address,
+    });
+
     try {
       const hash = await writeContractAsync({
         address: IDO_CONTRACT_ADDRESS,
         abi: IDO_ABI,
         functionName: 'createInvoice',
-        args: [
-          params.invoiceId,
-          parseUnits(params.usdtAmount, 6),
-          parseUnits(params.tokenAmount, 18),
-          BigInt(expiryTimestamp),
-          (recipient || '0x0000000000000000000000000000000000000000') as Address,
-          params.notes || '',
-        ],
+        args: createArgs,
       });
 
       await publicClient.waitForTransactionReceipt({ hash });

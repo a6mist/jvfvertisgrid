@@ -3,11 +3,19 @@ import { Copy, Check, Share2, ExternalLink, Wallet, Loader2 } from 'lucide-react
 import { generateInvoiceId, saveInvoice, Invoice } from '../utils/invoiceStorage';
 import { useIdoContract } from '../hooks/useContract';
 import { useWallet } from '../context/WalletContext';
-import { isContractsConfigured } from '../config/contracts';
+import { IDO_CONTRACT_ADDRESS, isContractsConfigured } from '../config/contracts';
 import { toast } from 'sonner';
+import { useReadContract } from 'wagmi';
 
-const ALLOWED_IDO_ADMIN_WALLET = '0xEb556534041026eF6f5Fd3223cb2b3Ca7E271ec6';
-const MASKED_ALLOWED_IDO_ADMIN_WALLET = '0xEb556*************************************71ec6';
+const ADMIN_ABI = [
+  {
+    name: 'getAdmins',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'address[]' }],
+  },
+] as const;
 
 export function InvoiceGenerator() {
   const [amount, setAmount] = useState('');
@@ -21,9 +29,21 @@ export function InvoiceGenerator() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { createInvoice } = useIdoContract();
   const { address, connect, isConnecting } = useWallet();
+  const { data: adminWallets = [] } = useReadContract({
+    chainId: 1,
+    address: IDO_CONTRACT_ADDRESS,
+    abi: ADMIN_ABI,
+    functionName: 'getAdmins',
+    query: {
+      enabled: isContractsConfigured,
+    },
+  });
+
+  const normalizedAddress = address?.toLowerCase();
+
   const isAllowedWallet =
-    Boolean(address) &&
-    address.toLowerCase() === ALLOWED_IDO_ADMIN_WALLET.toLowerCase();
+    Boolean(normalizedAddress) &&
+    adminWallets.some((admin) => admin.toLowerCase() === normalizedAddress);
 
   const TOKEN_RATE = 100; // 1 USDT = 100 WRL tokens
 
@@ -128,7 +148,7 @@ export function InvoiceGenerator() {
               {address ? 'Connecting wallet failed' : 'Wallet required'}
             </p>
             <p className={`text-sm ${address ? 'text-red-200/90' : 'text-white/70'}`}>
-              Connect this wallet to access Admin Panel: {MASKED_ALLOWED_IDO_ADMIN_WALLET}
+              Connect an on-chain admin wallet to access the Admin Panel.
             </p>
             {!address && (
               <button
