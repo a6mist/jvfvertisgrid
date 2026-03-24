@@ -5,9 +5,12 @@ import { ToggleSwitch } from "../components/toggle-switch";
 import { ConfirmModal } from "../components/confirm-modal";
 import { useIdoAdmin } from "../hooks/useIdoAdmin";
 import { useWlgTokenAdmin } from "../hooks/useWlgTokenAdmin";
+import { IDO_CONTRACT_ADDRESS, TOKEN_CONTRACT_ADDRESS } from "../config/contracts";
+import { useChainId } from "wagmi";
 import { toast } from "sonner";
 
 export function Controls() {
+  const chainId = useChainId();
   const {
     connectedRole,
     stats,
@@ -45,6 +48,8 @@ export function Controls() {
   const [requiredApprovalsInput, setRequiredApprovalsInput] = useState("1");
   const [mintTo, setMintTo] = useState("");
   const [mintAmount, setMintAmount] = useState("");
+  const hasIdoReadIssue = !stats.owner && stats.signers.length === 0 && stats.requiredApprovals === 0;
+  const hasTokenReadIssue = isTokenConfigured && Number(tokenStats.totalSupply) === 0 && Number(tokenStats.idoInventory) === 0;
 
   useEffect(() => {
     setBuyPaused(stats.isBuyPaused);
@@ -244,6 +249,25 @@ export function Controls() {
 
   return (
     <div className="space-y-8">
+      {(hasIdoReadIssue || hasTokenReadIssue) && (
+        <GlassCard>
+          <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 space-y-2">
+            <p className="text-sm font-semibold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4" />
+              Some on-chain admin data could not be loaded.
+            </p>
+            <p className="text-xs text-amber-100/90">
+              This usually means contract address or network mismatch. Verify your Vercel env addresses and connect MetaMask to the deployment network.
+            </p>
+            <div className="text-xs text-amber-100/90 space-y-1 font-mono break-all">
+              <p>Connected chain id: {chainId}</p>
+              <p>IDO contract: {IDO_CONTRACT_ADDRESS}</p>
+              <p>Token contract: {TOKEN_CONTRACT_ADDRESS}</p>
+            </div>
+          </div>
+        </GlassCard>
+      )}
+
       <div>
         <h2 className="text-2xl text-white mb-2">Sale Control Panel</h2>
         <p className="text-white/60">Manage sale parameters and administrative access</p>
