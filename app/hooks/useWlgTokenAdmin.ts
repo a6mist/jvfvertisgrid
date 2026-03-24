@@ -31,41 +31,47 @@ export const useWlgTokenAdmin = () => {
   const { address } = useAccount();
   const { writeContractAsync } = useWriteContract();
 
-  const { data: totalSupplyRaw } = useReadContract({
+  const totalSupplyRead = useReadContract({
     address: TOKEN_CONTRACT_ADDRESS,
     abi: WLG_TOKEN_ABI,
     functionName: "totalSupply",
     query: { enabled: isTokenConfigured },
   });
 
-  const { data: pausedRaw } = useReadContract({
+  const pausedRead = useReadContract({
     address: TOKEN_CONTRACT_ADDRESS,
     abi: WLG_TOKEN_ABI,
     functionName: "paused",
     query: { enabled: isTokenConfigured },
   });
 
-  const { data: burnEnabledRaw } = useReadContract({
+  const burnEnabledRead = useReadContract({
     address: TOKEN_CONTRACT_ADDRESS,
     abi: WLG_TOKEN_ABI,
     functionName: "burnEnabled",
     query: { enabled: isTokenConfigured },
   });
 
-  const { data: pauseEnabledRaw } = useReadContract({
+  const pauseEnabledRead = useReadContract({
     address: TOKEN_CONTRACT_ADDRESS,
     abi: WLG_TOKEN_ABI,
     functionName: "pauseEnabled",
     query: { enabled: isTokenConfigured },
   });
 
-  const { data: idoInventoryRaw } = useReadContract({
+  const idoInventoryRead = useReadContract({
     address: TOKEN_CONTRACT_ADDRESS,
     abi: WLG_TOKEN_ABI,
     functionName: "balanceOf",
     args: [IDO_CONTRACT_ADDRESS],
     query: { enabled: isTokenConfigured },
   });
+
+  const totalSupplyRaw = totalSupplyRead.data;
+  const pausedRaw = pausedRead.data;
+  const burnEnabledRaw = burnEnabledRead.data;
+  const pauseEnabledRaw = pauseEnabledRead.data;
+  const idoInventoryRaw = idoInventoryRead.data;
 
   const { data: hasAdminRoleRaw } = useReadContract({
     address: TOKEN_CONTRACT_ADDRESS,
@@ -90,6 +96,13 @@ export const useWlgTokenAdmin = () => {
     args: [PAUSER_ROLE, (address ?? "0x0000000000000000000000000000000000000000") as Address],
     query: { enabled: isTokenConfigured && Boolean(address) },
   });
+
+  const hasReadIssue =
+    Boolean(totalSupplyRead.error) ||
+    Boolean(pausedRead.error) ||
+    Boolean(burnEnabledRead.error) ||
+    Boolean(pauseEnabledRead.error) ||
+    Boolean(idoInventoryRead.error);
 
   const stats = useMemo(
     () => ({
@@ -139,6 +152,7 @@ export const useWlgTokenAdmin = () => {
   return {
     isTokenConfigured,
     stats,
+    hasReadIssue,
     mint,
     pause,
     unpause,

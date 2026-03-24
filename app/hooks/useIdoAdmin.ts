@@ -186,30 +186,41 @@ export const useIdoAdmin = () => {
     functionName: "MAX_TOKENS",
     query: { enabled: isContractsConfigured },
   });
-  const { data: ownerRaw } = useReadContract({
+  const ownerRead = useReadContract({
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ADMIN_ABI,
     functionName: "owner",
     query: { enabled: isContractsConfigured },
   });
-  const { data: adminsRaw } = useReadContract({
+  const adminsRead = useReadContract({
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ADMIN_ABI,
     functionName: "getAdmins",
     query: { enabled: isContractsConfigured },
   });
-  const { data: signersRaw } = useReadContract({
+  const signersRead = useReadContract({
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ADMIN_ABI,
     functionName: "getSigners",
     query: { enabled: isContractsConfigured },
   });
-  const { data: requiredApprovalsRaw } = useReadContract({
+  const requiredApprovalsRead = useReadContract({
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ADMIN_ABI,
     functionName: "requiredApprovals",
     query: { enabled: isContractsConfigured },
   });
+
+  const ownerRaw = ownerRead.data;
+  const adminsRaw = adminsRead.data;
+  const signersRaw = signersRead.data;
+  const requiredApprovalsRaw = requiredApprovalsRead.data;
+
+  const hasReadIssue =
+    Boolean(ownerRead.error) ||
+    Boolean(adminsRead.error) ||
+    Boolean(signersRead.error) ||
+    Boolean(requiredApprovalsRead.error);
 
   useEffect(() => {
     const loadPurchaseStats = async () => {
@@ -424,6 +435,7 @@ export const useIdoAdmin = () => {
     isContractsConfigured,
     connectedRole,
     stats,
+    hasReadIssue,
     requests,
     approvalsByRequest,
     isLoadingRequests,

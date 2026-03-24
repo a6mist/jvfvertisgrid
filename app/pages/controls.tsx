@@ -14,6 +14,7 @@ export function Controls() {
   const {
     connectedRole,
     stats,
+    hasReadIssue: hasIdoReadIssue,
     setBuyPaused: setBuyPausedOnChain,
     setClaimPaused: setClaimPausedOnChain,
     setSaleHasEnd,
@@ -28,6 +29,7 @@ export function Controls() {
   const {
     isTokenConfigured,
     stats: tokenStats,
+    hasReadIssue: hasTokenReadIssue,
     mint,
     pause,
     unpause,
@@ -48,8 +50,7 @@ export function Controls() {
   const [requiredApprovalsInput, setRequiredApprovalsInput] = useState("1");
   const [mintTo, setMintTo] = useState("");
   const [mintAmount, setMintAmount] = useState("");
-  const hasIdoReadIssue = !stats.owner && stats.signers.length === 0 && stats.requiredApprovals === 0;
-  const hasTokenReadIssue = isTokenConfigured && Number(tokenStats.totalSupply) === 0 && Number(tokenStats.idoInventory) === 0;
+  const hasAnyReadIssue = hasIdoReadIssue || (isTokenConfigured && hasTokenReadIssue);
 
   useEffect(() => {
     setBuyPaused(stats.isBuyPaused);
@@ -249,7 +250,7 @@ export function Controls() {
 
   return (
     <div className="space-y-8">
-      {(hasIdoReadIssue || hasTokenReadIssue) && (
+      {hasAnyReadIssue && (
         <GlassCard>
           <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 space-y-2">
             <p className="text-sm font-semibold flex items-center gap-2">
