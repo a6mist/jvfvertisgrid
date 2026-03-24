@@ -116,13 +116,10 @@ const IDO_ABI = [
     ],
   },
   {
-    name: 'buy',
+    name: 'buyWithExactUSDT',
     type: 'function',
     stateMutability: 'nonpayable',
-    inputs: [
-      { type: 'uint256', name: 'desiredTokens' },
-      { type: 'uint256', name: 'maxUsdtAllowed' },
-    ],
+    inputs: [{ type: 'uint256', name: 'usdtAmount' }],
     outputs: [],
   },
   {
@@ -407,7 +404,10 @@ export const useIdoContract = () => {
         args: [IDO_CONTRACT_ADDRESS, parseUnits(amount, 6)],
       });
 
-      await readClient.waitForTransactionReceipt({ hash });
+      const receipt = await readClient.waitForTransactionReceipt({ hash });
+      if (receipt.status !== 'success') {
+        throw new Error('USDT approval transaction failed on-chain');
+      }
       return hash;
     } catch (error) {
       console.error('Approve failed:', error);
@@ -437,9 +437,15 @@ export const useIdoContract = () => {
       const hash = await writeContractAsync({
         address: IDO_CONTRACT_ADDRESS,
         abi: IDO_ABI,
-        functionName: 'buy',
-        args: [desiredTokens, usdtAmountInUnits],
+        functionName: 'buyWithExactUSDT',
+        args: [usdtAmountInUnits],
       });
+
+      const receipt = await readClient.waitForTransactionReceipt({ hash });
+      if (receipt.status !== 'success') {
+        throw new Error('Purchase transaction failed on-chain');
+      }
+
       return hash;
     } catch (error) {
       console.error('Buy failed:', error);
