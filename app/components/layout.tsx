@@ -215,7 +215,7 @@ export function Layout() {
               {isUnauthorizedConnected ? "Connecting wallet failed" : "Wallet required"}
             </h2>
             <p className={`text-sm ${isUnauthorizedConnected ? "text-red-200/90" : "text-white/70"}`}>
-              Connect this wallet to access IDO Admin: {MASKED_ALLOWED_IDO_ADMIN_WALLET} or {MASKED_ALLOWED_IDO_ADMIN_WALLET_2}
+              Connect this wallet to access IDO Admin: {MASKED_ALLOWED_IDO_ADMIN_WALLET}
             </p>
           </div>
         ) : (

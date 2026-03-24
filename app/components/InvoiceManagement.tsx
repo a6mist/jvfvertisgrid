@@ -177,7 +177,7 @@ export function InvoiceManagement() {
             {address ? 'Connecting wallet failed' : 'Wallet required'}
           </p>
           <p className={`text-sm ${address ? 'text-red-200/90' : 'text-white/70'}`}>
-            Connect this wallet to access Admin Panel: {MASKED_ALLOWED_IDO_ADMIN_WALLET} or {MASKED_ALLOWED_IDO_ADMIN_WALLET_2}
+            Connect this wallet to access Admin Panel: {MASKED_ALLOWED_IDO_ADMIN_WALLET}
           </p>
           {!address && (
             <button
