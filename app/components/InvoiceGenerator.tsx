@@ -6,10 +6,8 @@ import { useWallet } from '../context/WalletContext';
 import { isContractsConfigured } from '../config/contracts';
 import { toast } from 'sonner';
 
-const ALLOWED_IDO_ADMIN_WALLETS = [
-  '0xEb556534041026eF6f5Fd3223cb2b3Ca7E271ec6',
-  '0x208757a4B5e89b9802A7b2a83Cf7e6DC7C2D49FE',
-];
+const ALLOWED_IDO_ADMIN_WALLET = '0xEb556534041026eF6f5Fd3223cb2b3Ca7E271ec6';
+const MASKED_ALLOWED_IDO_ADMIN_WALLET = '0xEb556*************************************71ec6';
 
 export function InvoiceGenerator() {
   const [amount, setAmount] = useState('');
@@ -25,9 +23,7 @@ export function InvoiceGenerator() {
   const { address, connect, isConnecting } = useWallet();
   const isAllowedWallet =
     Boolean(address) &&
-    ALLOWED_IDO_ADMIN_WALLETS.some(
-      (wallet) => wallet.toLowerCase() === address.toLowerCase(),
-    );
+    address.toLowerCase() === ALLOWED_IDO_ADMIN_WALLET.toLowerCase();
 
   const TOKEN_RATE = 100; // 1 USDT = 100 WRL tokens
 
@@ -132,7 +128,7 @@ export function InvoiceGenerator() {
               {address ? 'Connecting wallet failed' : 'Wallet required'}
             </p>
             <p className={`text-sm ${address ? 'text-red-200/90' : 'text-white/70'}`}>
-              Connect an authorized admin wallet to access this panel.
+              Connect this wallet to access Admin Panel: {MASKED_ALLOWED_IDO_ADMIN_WALLET}
             </p>
             {!address && (
               <button
@@ -176,7 +172,9 @@ export function InvoiceGenerator() {
             <div>
               <p className="text-sm text-gray-400 mb-1">Wallet Connection</p>
               {address ? (
-                <p className="text-emerald-300 text-sm">Wallet connected</p>
+                <p className="text-white font-mono text-sm">
+                  {address.slice(0, 6)}...{address.slice(-4)}
+                </p>
               ) : (
                 <p className="text-yellow-400 text-sm">Connect wallet to create invoice on-chain</p>
               )}
