@@ -35,13 +35,20 @@ export const BuyTokens = () => {
   });
 
   const handleQuickConnect = async () => {
-    if (connectors.length === 0) {
+    const readyConnectors = connectors.filter((connector) => connector.ready ?? true);
+    if (readyConnectors.length === 0) {
       toast.error('No wallet connector available.');
       return;
     }
 
+    const preferredConnector =
+      readyConnectors.find((connector) => {
+        const normalized = `${connector.id} ${connector.name}`.toLowerCase();
+        return normalized.includes('meta');
+      }) ?? readyConnectors[0];
+
     try {
-      await connectAsync({ connector: connectors[0] });
+      await connectAsync({ connector: preferredConnector });
       toast.success('Wallet connected successfully!');
     } catch (error) {
       console.error('Connect wallet failed:', error);

@@ -18,6 +18,18 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const { connectors, connectAsync, isPending } = useConnect();
   const { disconnect } = useDisconnect();
 
+  const getPreferredConnector = () => {
+    const readyConnectors = connectors.filter((connector) => connector.ready ?? true);
+    if (readyConnectors.length === 0) return null;
+
+    const metaMask = readyConnectors.find((connector) => {
+      const normalized = `${connector.id} ${connector.name}`.toLowerCase();
+      return normalized.includes('meta');
+    });
+
+    return metaMask ?? readyConnectors[0];
+  };
+
   const { data: usdtBalanceData } = useBalance({
     address,
     token: USDT_CONTRACT_ADDRESS,
@@ -30,8 +42,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [usdtBalanceData]);
 
   const connect = async () => {
-    if (isConnected || connectors.length === 0) return;
-    await connectAsync({ connector: connectors[0] });
+    if (isConnected) return;
+
+    const connector = getPreferredConnector();
+    if (!connector) {
+      throw new Error('No wallet connector available. Install MetaMask or use WalletConnect.');
+    }
+
+    await connectAsync({ connector });
   };
 
   const handleDisconnect = () => disconnect();

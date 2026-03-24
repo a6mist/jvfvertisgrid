@@ -22,6 +22,18 @@ export function Layout() {
 
   const walletLabel = isAllowedWallet && address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Connect Wallet";
 
+  const getPreferredConnector = () => {
+    const readyConnectors = connectors.filter((connector) => connector.ready ?? true);
+    if (readyConnectors.length === 0) return null;
+
+    const metaMask = readyConnectors.find((connector) => {
+      const normalized = `${connector.id} ${connector.name}`.toLowerCase();
+      return normalized.includes("meta");
+    });
+
+    return metaMask ?? readyConnectors[0];
+  };
+
   useEffect(() => {
     if (isUnauthorizedConnected) {
       disconnect();
@@ -47,10 +59,14 @@ export function Layout() {
       return;
     }
 
-    if (connectors.length === 0) return;
+    const connector = getPreferredConnector();
+    if (!connector) {
+      toast.error("No wallet connector available");
+      return;
+    }
 
     try {
-      const result = await connectAsync({ connector: connectors[0] });
+      const result = await connectAsync({ connector });
       const connectedAddress = result.accounts?.[0];
 
       if (

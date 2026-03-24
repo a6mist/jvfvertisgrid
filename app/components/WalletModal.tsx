@@ -216,6 +216,12 @@ export const WalletModal = ({ isOpen, onClose }: WalletModalProps) => {
               );
             })}
 
+            {uniqueConnectors.length === 0 && (
+              <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-sm text-red-200">
+                No wallet connector detected. Install MetaMask extension or use a WalletConnect-compatible wallet.
+              </div>
+            )}
+
             <div className="pt-4 border-t border-white/10">
               <p className="text-xs text-gray-400 text-center">
                 By connecting a wallet, you agree to our Terms of Service
