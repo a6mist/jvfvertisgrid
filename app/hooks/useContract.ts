@@ -7,6 +7,8 @@ import {
   isContractsConfigured,
 } from '../config/contracts';
 
+const READ_CHAIN_ID = 1;
+
 // Mock IDO Contract ABI (simplified)
 const IDO_ABI = [
   {
@@ -240,11 +242,13 @@ const INVOICE_PAID_EVENT = parseAbiItem(
 
 export const useIdoContract = () => {
   const { address, isConnected } = useAccount();
-  const { writeContract } = useWriteContract();
+  const { writeContractAsync } = useWriteContract();
   const publicClient = usePublicClient();
+  const readClient = usePublicClient({ chainId: READ_CHAIN_ID });
   const account = (address ?? '0x0000000000000000000000000000000000000000') as Address;
 
   const { data: currentPriceRaw } = useReadContract({
+    chainId: READ_CHAIN_ID,
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ABI,
     functionName: 'getCurrentPrice',
@@ -252,6 +256,7 @@ export const useIdoContract = () => {
   });
 
   const { data: currentTierRaw } = useReadContract({
+    chainId: READ_CHAIN_ID,
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ABI,
     functionName: 'currentTier',
@@ -259,6 +264,7 @@ export const useIdoContract = () => {
   });
 
   const { data: totalSoldRaw } = useReadContract({
+    chainId: READ_CHAIN_ID,
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ABI,
     functionName: 'totalSold',
@@ -266,6 +272,7 @@ export const useIdoContract = () => {
   });
 
   const { data: totalUsdtCollectedRaw } = useReadContract({
+    chainId: READ_CHAIN_ID,
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ABI,
     functionName: 'totalUsdtCollected',
@@ -273,6 +280,7 @@ export const useIdoContract = () => {
   });
 
   const { data: totalParticipantsRaw } = useReadContract({
+    chainId: READ_CHAIN_ID,
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ABI,
     functionName: 'totalParticipants',
@@ -280,6 +288,7 @@ export const useIdoContract = () => {
   });
 
   const { data: startPriceRaw } = useReadContract({
+    chainId: READ_CHAIN_ID,
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ABI,
     functionName: 'START_PRICE',
@@ -287,6 +296,7 @@ export const useIdoContract = () => {
   });
 
   const { data: priceIncrementRaw } = useReadContract({
+    chainId: READ_CHAIN_ID,
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ABI,
     functionName: 'PRICE_INCREMENT',
@@ -294,6 +304,7 @@ export const useIdoContract = () => {
   });
 
   const { data: usdtPerTierRaw } = useReadContract({
+    chainId: READ_CHAIN_ID,
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ABI,
     functionName: 'USDT_PER_TIER',
@@ -301,6 +312,7 @@ export const useIdoContract = () => {
   });
 
   const { data: maxTokensRaw } = useReadContract({
+    chainId: READ_CHAIN_ID,
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ABI,
     functionName: 'MAX_TOKENS',
@@ -308,6 +320,7 @@ export const useIdoContract = () => {
   });
 
   const { data: userPurchasedRaw } = useReadContract({
+    chainId: READ_CHAIN_ID,
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ABI,
     functionName: 'purchased',
@@ -316,6 +329,7 @@ export const useIdoContract = () => {
   });
 
   const { data: userClaimedRaw } = useReadContract({
+    chainId: READ_CHAIN_ID,
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ABI,
     functionName: 'claimed',
@@ -324,19 +338,27 @@ export const useIdoContract = () => {
   });
 
   const { data: usdtBalanceRaw } = useReadContract({
+    chainId: READ_CHAIN_ID,
     address: USDT_CONTRACT_ADDRESS,
     abi: USDT_ABI,
     functionName: 'balanceOf',
     args: [account],
-    query: { enabled: isContractsConfigured && Boolean(address) },
+    query: {
+      enabled: isContractsConfigured && Boolean(address),
+      refetchInterval: 5000,
+    },
   });
 
   const { data: usdtAllowanceRaw } = useReadContract({
+    chainId: READ_CHAIN_ID,
     address: USDT_CONTRACT_ADDRESS,
     abi: USDT_ABI,
     functionName: 'allowance',
     args: [account, IDO_CONTRACT_ADDRESS],
-    query: { enabled: isContractsConfigured && Boolean(address) },
+    query: {
+      enabled: isContractsConfigured && Boolean(address),
+      refetchInterval: 3000,
+    },
   });
 
   const stats = useMemo<IdoStats>(
@@ -375,14 +397,17 @@ export const useIdoContract = () => {
   const approveUsdt = async (amount: string) => {
     if (!address) throw new Error('Wallet not connected');
     if (!isContractsConfigured) throw new Error('Contract addresses are not configured');
+    if (!readClient) throw new Error('Read client not available');
     
     try {
-      const hash = await writeContract({
+      const hash = await writeContractAsync({
         address: USDT_CONTRACT_ADDRESS,
         abi: USDT_ABI,
         functionName: 'approve',
         args: [IDO_CONTRACT_ADDRESS, parseUnits(amount, 6)],
       });
+
+      await readClient.waitForTransactionReceipt({ hash });
       return hash;
     } catch (error) {
       console.error('Approve failed:', error);
@@ -393,11 +418,11 @@ export const useIdoContract = () => {
   const buyTokens = async (usdtAmount: string) => {
     if (!address) throw new Error('Wallet not connected');
     if (!isContractsConfigured) throw new Error('Contract addresses are not configured');
-    if (!publicClient) throw new Error('Public client not available');
+    if (!readClient) throw new Error('Read client not available');
     
     try {
       const usdtAmountInUnits = parseUnits(usdtAmount, 6);
-      const simulation = await publicClient.readContract({
+      const simulation = await readClient.readContract({
         address: IDO_CONTRACT_ADDRESS,
         abi: IDO_ABI,
         functionName: 'simulateBuyWithUSDT',
@@ -409,7 +434,7 @@ export const useIdoContract = () => {
         throw new Error('No tokens can be purchased for this USDT amount');
       }
 
-      const hash = await writeContract({
+      const hash = await writeContractAsync({
         address: IDO_CONTRACT_ADDRESS,
         abi: IDO_ABI,
         functionName: 'buy',
@@ -427,7 +452,7 @@ export const useIdoContract = () => {
     if (!isContractsConfigured) throw new Error('Contract addresses are not configured');
     
     try {
-      const hash = await writeContract({
+      const hash = await writeContractAsync({
         address: IDO_CONTRACT_ADDRESS,
         abi: IDO_ABI,
         functionName: 'claim',
@@ -446,7 +471,7 @@ export const useIdoContract = () => {
 
     try {
       const maxUsdtAllowed = parseUnits(usdtAmount, 6);
-      const hash = await writeContract({
+      const hash = await writeContractAsync({
         address: IDO_CONTRACT_ADDRESS,
         abi: IDO_ABI,
         functionName: 'payInvoice',
@@ -462,10 +487,10 @@ export const useIdoContract = () => {
   };
 
   const getOnChainInvoice = async (invoiceId: string): Promise<OnChainInvoice | null> => {
-    if (!isContractsConfigured || !publicClient || !invoiceId) return null;
+    if (!isContractsConfigured || !readClient || !invoiceId) return null;
 
     try {
-      const rawInvoice = (await publicClient.readContract({
+      const rawInvoice = (await readClient.readContract({
         address: IDO_CONTRACT_ADDRESS,
         abi: IDO_ABI,
         functionName: 'getInvoice',
@@ -506,20 +531,23 @@ export const useIdoContract = () => {
   };
 
   const getInvoicePaymentTxHash = async (invoiceId: string): Promise<string | null> => {
-    if (!isContractsConfigured || !publicClient || !invoiceId) return null;
+    if (!isContractsConfigured || !readClient || !invoiceId) return null;
 
     try {
-      const logs = await publicClient.getLogs({
+      const logs = await readClient.getLogs({
         address: IDO_CONTRACT_ADDRESS,
         event: INVOICE_PAID_EVENT,
-        args: { invoiceId },
         fromBlock: 0n,
         toBlock: 'latest',
       });
 
-      if (logs.length === 0) return null;
+      const matchingLogs = logs.filter(
+        (log) => (log.args as Record<string, unknown> | undefined)?.invoiceId === invoiceId,
+      );
 
-      return logs[logs.length - 1].transactionHash;
+      if (matchingLogs.length === 0) return null;
+
+      return matchingLogs[matchingLogs.length - 1].transactionHash;
     } catch (error) {
       console.error('Failed to read invoice payment logs:', error);
       return null;
@@ -549,7 +577,7 @@ export const useIdoContract = () => {
     }
 
     try {
-      const hash = await writeContract({
+      const hash = await writeContractAsync({
         address: IDO_CONTRACT_ADDRESS,
         abi: IDO_ABI,
         functionName: 'createInvoice',
@@ -587,21 +615,21 @@ export const useIdoContract = () => {
     userAddress?: Address,
     limit = 50,
   ): Promise<PortfolioActivityItem[]> => {
-    if (!isContractsConfigured || !publicClient) return [];
+    if (!isContractsConfigured || !readClient) return [];
 
     const target = userAddress ?? address;
     if (!target) return [];
 
     try {
       const [purchaseLogs, claimLogs] = await Promise.all([
-        publicClient.getLogs({
+        readClient.getLogs({
           address: IDO_CONTRACT_ADDRESS,
           event: TOKENS_PURCHASED_EVENT,
           args: { buyer: target },
           fromBlock: 0n,
           toBlock: 'latest',
         }),
-        publicClient.getLogs({
+        readClient.getLogs({
           address: IDO_CONTRACT_ADDRESS,
           event: TOKENS_CLAIMED_EVENT,
           args: { claimer: target },
@@ -621,7 +649,7 @@ export const useIdoContract = () => {
       const blockNumbers = [...new Set(recentLogs.map((log) => String(log.blockNumber ?? 0n)))];
       const blocks = await Promise.all(
         blockNumbers.map(async (blockNumber) => {
-          const block = await publicClient.getBlock({ blockNumber: BigInt(blockNumber) });
+          const block = await readClient.getBlock({ blockNumber: BigInt(blockNumber) });
           return [blockNumber, Number(block.timestamp)] as const;
         }),
       );
