@@ -7,6 +7,8 @@ import { toast } from "sonner";
 
 const ALLOWED_IDO_ADMIN_WALLET = "0xEb556534041026eF6f5Fd3223cb2b3Ca7E271ec6";
 const MASKED_ALLOWED_IDO_ADMIN_WALLET = "0xEb556*************************************71ec6";
+const ALLOWED_IDO_ADMIN_WALLET_2 = "0x208757a4B5e89b9802A7b2a83Cf7e6DC7C2D49FE";
+const MASKED_ALLOWED_IDO_ADMIN_WALLET_2 = "0x208757*************************************49FE";
 
 export function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -16,7 +18,9 @@ export function Layout() {
   const hasShownUnauthorizedToast = useRef(false);
   const isAllowedWallet =
     Boolean(address) &&
-    address.toLowerCase() === ALLOWED_IDO_ADMIN_WALLET.toLowerCase();
+    [ALLOWED_IDO_ADMIN_WALLET, ALLOWED_IDO_ADMIN_WALLET_2].some(
+      (wallet) => address.toLowerCase() === wallet.toLowerCase(),
+    );
   const isUnauthorizedConnected = Boolean(isConnected && address && !isAllowedWallet);
   const hasAdminAccess = Boolean(isConnected && isAllowedWallet);
 
@@ -71,7 +75,9 @@ export function Layout() {
 
       if (
         !connectedAddress ||
-        connectedAddress.toLowerCase() !== ALLOWED_IDO_ADMIN_WALLET.toLowerCase()
+        ![ALLOWED_IDO_ADMIN_WALLET, ALLOWED_IDO_ADMIN_WALLET_2].some(
+          (wallet) => connectedAddress.toLowerCase() === wallet.toLowerCase(),
+        )
       ) {
         disconnect();
         toast.error("Connecting wallet failed");
@@ -209,7 +215,7 @@ export function Layout() {
               {isUnauthorizedConnected ? "Connecting wallet failed" : "Wallet required"}
             </h2>
             <p className={`text-sm ${isUnauthorizedConnected ? "text-red-200/90" : "text-white/70"}`}>
-              Connect this wallet to access IDO Admin: {MASKED_ALLOWED_IDO_ADMIN_WALLET}
+              Connect this wallet to access IDO Admin: {MASKED_ALLOWED_IDO_ADMIN_WALLET} or {MASKED_ALLOWED_IDO_ADMIN_WALLET_2}
             </p>
           </div>
         ) : (

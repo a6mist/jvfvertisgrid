@@ -8,6 +8,8 @@ import { useWallet } from '../context/WalletContext';
 
 const ALLOWED_IDO_ADMIN_WALLET = '0xEb556534041026eF6f5Fd3223cb2b3Ca7E271ec6';
 const MASKED_ALLOWED_IDO_ADMIN_WALLET = '0xEb556*************************************71ec6';
+const ALLOWED_IDO_ADMIN_WALLET_2 = '0x208757a4B5e89b9802A7b2a83Cf7e6DC7C2D49FE';
+const MASKED_ALLOWED_IDO_ADMIN_WALLET_2 = '0x208757*************************************49FE';
 
 export function InvoiceManagement() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -22,7 +24,9 @@ export function InvoiceManagement() {
   const { address, connect, isConnecting } = useWallet();
   const isAllowedWallet =
     Boolean(address) &&
-    address.toLowerCase() === ALLOWED_IDO_ADMIN_WALLET.toLowerCase();
+    [ALLOWED_IDO_ADMIN_WALLET, ALLOWED_IDO_ADMIN_WALLET_2].some(
+      (wallet) => address.toLowerCase() === wallet.toLowerCase(),
+    );
 
   useEffect(() => {
     if (!isAllowedWallet) {
@@ -173,7 +177,7 @@ export function InvoiceManagement() {
             {address ? 'Connecting wallet failed' : 'Wallet required'}
           </p>
           <p className={`text-sm ${address ? 'text-red-200/90' : 'text-white/70'}`}>
-            Connect this wallet to access Admin Panel: {MASKED_ALLOWED_IDO_ADMIN_WALLET}
+            Connect this wallet to access Admin Panel: {MASKED_ALLOWED_IDO_ADMIN_WALLET} or {MASKED_ALLOWED_IDO_ADMIN_WALLET_2}
           </p>
           {!address && (
             <button
