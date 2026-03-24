@@ -3,6 +3,8 @@ import { useAccount, usePublicClient, useReadContract, useWriteContract } from "
 import { formatUnits, isAddress, parseUnits, type Address } from "viem";
 import { IDO_CONTRACT_ADDRESS, isContractsConfigured } from "../config/contracts";
 
+const ADMIN_READ_CHAIN_ID = 1;
+
 const IDO_ADMIN_ABI = [
   { name: "saleHasEnd", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "bool" }] },
   { name: "isBuyPaused", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "bool" }] },
@@ -111,7 +113,7 @@ type RequestEntry = {
 export const useIdoAdmin = () => {
   const { address } = useAccount();
   const { writeContractAsync } = useWriteContract();
-  const publicClient = usePublicClient();
+  const publicClient = usePublicClient({ chainId: ADMIN_READ_CHAIN_ID });
 
   const [requests, setRequests] = useState<RequestEntry[]>([]);
   const [approvalsByRequest, setApprovalsByRequest] = useState<Record<string, ApprovalEntry[]>>({});
@@ -121,90 +123,105 @@ export const useIdoAdmin = () => {
   const [refreshKey, setRefreshKey] = useState(0);
 
   const { data: isBuyPausedRaw } = useReadContract({
+    chainId: ADMIN_READ_CHAIN_ID,
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ADMIN_ABI,
     functionName: "isBuyPaused",
     query: { enabled: isContractsConfigured },
   });
   const { data: saleHasEndRaw } = useReadContract({
+    chainId: ADMIN_READ_CHAIN_ID,
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ADMIN_ABI,
     functionName: "saleHasEnd",
     query: { enabled: isContractsConfigured },
   });
   const { data: isClaimPausedRaw } = useReadContract({
+    chainId: ADMIN_READ_CHAIN_ID,
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ADMIN_ABI,
     functionName: "isClaimPaused",
     query: { enabled: isContractsConfigured },
   });
   const { data: startTimeRaw } = useReadContract({
+    chainId: ADMIN_READ_CHAIN_ID,
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ADMIN_ABI,
     functionName: "startTime",
     query: { enabled: isContractsConfigured },
   });
   const { data: endTimeRaw } = useReadContract({
+    chainId: ADMIN_READ_CHAIN_ID,
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ADMIN_ABI,
     functionName: "endTime",
     query: { enabled: isContractsConfigured },
   });
   const { data: releasedRaw } = useReadContract({
+    chainId: ADMIN_READ_CHAIN_ID,
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ADMIN_ABI,
     functionName: "released",
     query: { enabled: isContractsConfigured },
   });
   const { data: totalSoldRaw } = useReadContract({
+    chainId: ADMIN_READ_CHAIN_ID,
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ADMIN_ABI,
     functionName: "totalSold",
     query: { enabled: isContractsConfigured },
   });
   const { data: totalUsdtCollectedRaw } = useReadContract({
+    chainId: ADMIN_READ_CHAIN_ID,
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ADMIN_ABI,
     functionName: "totalUsdtCollected",
     query: { enabled: isContractsConfigured },
   });
   const { data: currentTierRaw } = useReadContract({
+    chainId: ADMIN_READ_CHAIN_ID,
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ADMIN_ABI,
     functionName: "currentTier",
     query: { enabled: isContractsConfigured },
   });
   const { data: currentPriceRaw } = useReadContract({
+    chainId: ADMIN_READ_CHAIN_ID,
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ADMIN_ABI,
     functionName: "getCurrentPrice",
     query: { enabled: isContractsConfigured },
   });
   const { data: maxTokensRaw } = useReadContract({
+    chainId: ADMIN_READ_CHAIN_ID,
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ADMIN_ABI,
     functionName: "MAX_TOKENS",
     query: { enabled: isContractsConfigured },
   });
   const ownerRead = useReadContract({
+    chainId: ADMIN_READ_CHAIN_ID,
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ADMIN_ABI,
     functionName: "owner",
     query: { enabled: isContractsConfigured },
   });
   const adminsRead = useReadContract({
+    chainId: ADMIN_READ_CHAIN_ID,
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ADMIN_ABI,
     functionName: "getAdmins",
     query: { enabled: isContractsConfigured },
   });
   const signersRead = useReadContract({
+    chainId: ADMIN_READ_CHAIN_ID,
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ADMIN_ABI,
     functionName: "getSigners",
     query: { enabled: isContractsConfigured },
   });
   const requiredApprovalsRead = useReadContract({
+    chainId: ADMIN_READ_CHAIN_ID,
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ADMIN_ABI,
     functionName: "requiredApprovals",
@@ -217,10 +234,10 @@ export const useIdoAdmin = () => {
   const requiredApprovalsRaw = requiredApprovalsRead.data;
 
   const hasReadIssue =
-    Boolean(ownerRead.error) ||
-    Boolean(adminsRead.error) ||
-    Boolean(signersRead.error) ||
-    Boolean(requiredApprovalsRead.error);
+    Boolean(ownerRead.error && ownerRead.data === undefined) ||
+    Boolean(adminsRead.error && adminsRead.data === undefined) ||
+    Boolean(signersRead.error && signersRead.data === undefined) ||
+    Boolean(requiredApprovalsRead.error && requiredApprovalsRead.data === undefined);
 
   useEffect(() => {
     const loadPurchaseStats = async () => {

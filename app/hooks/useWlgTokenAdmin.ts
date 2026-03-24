@@ -3,6 +3,8 @@ import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { formatUnits, isAddress, parseUnits, keccak256, toBytes, type Address } from "viem";
 import { IDO_CONTRACT_ADDRESS, TOKEN_CONTRACT_ADDRESS, isTokenConfigured } from "../config/contracts";
 
+const ADMIN_READ_CHAIN_ID = 1;
+
 const WLG_TOKEN_ABI = [
   { name: "totalSupply", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { name: "paused", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "bool" }] },
@@ -32,6 +34,7 @@ export const useWlgTokenAdmin = () => {
   const { writeContractAsync } = useWriteContract();
 
   const totalSupplyRead = useReadContract({
+    chainId: ADMIN_READ_CHAIN_ID,
     address: TOKEN_CONTRACT_ADDRESS,
     abi: WLG_TOKEN_ABI,
     functionName: "totalSupply",
@@ -39,6 +42,7 @@ export const useWlgTokenAdmin = () => {
   });
 
   const pausedRead = useReadContract({
+    chainId: ADMIN_READ_CHAIN_ID,
     address: TOKEN_CONTRACT_ADDRESS,
     abi: WLG_TOKEN_ABI,
     functionName: "paused",
@@ -46,6 +50,7 @@ export const useWlgTokenAdmin = () => {
   });
 
   const burnEnabledRead = useReadContract({
+    chainId: ADMIN_READ_CHAIN_ID,
     address: TOKEN_CONTRACT_ADDRESS,
     abi: WLG_TOKEN_ABI,
     functionName: "burnEnabled",
@@ -53,6 +58,7 @@ export const useWlgTokenAdmin = () => {
   });
 
   const pauseEnabledRead = useReadContract({
+    chainId: ADMIN_READ_CHAIN_ID,
     address: TOKEN_CONTRACT_ADDRESS,
     abi: WLG_TOKEN_ABI,
     functionName: "pauseEnabled",
@@ -60,6 +66,7 @@ export const useWlgTokenAdmin = () => {
   });
 
   const idoInventoryRead = useReadContract({
+    chainId: ADMIN_READ_CHAIN_ID,
     address: TOKEN_CONTRACT_ADDRESS,
     abi: WLG_TOKEN_ABI,
     functionName: "balanceOf",
@@ -74,6 +81,7 @@ export const useWlgTokenAdmin = () => {
   const idoInventoryRaw = idoInventoryRead.data;
 
   const { data: hasAdminRoleRaw } = useReadContract({
+    chainId: ADMIN_READ_CHAIN_ID,
     address: TOKEN_CONTRACT_ADDRESS,
     abi: WLG_TOKEN_ABI,
     functionName: "hasRole",
@@ -82,6 +90,7 @@ export const useWlgTokenAdmin = () => {
   });
 
   const { data: hasMinterRoleRaw } = useReadContract({
+    chainId: ADMIN_READ_CHAIN_ID,
     address: TOKEN_CONTRACT_ADDRESS,
     abi: WLG_TOKEN_ABI,
     functionName: "hasRole",
@@ -90,6 +99,7 @@ export const useWlgTokenAdmin = () => {
   });
 
   const { data: hasPauserRoleRaw } = useReadContract({
+    chainId: ADMIN_READ_CHAIN_ID,
     address: TOKEN_CONTRACT_ADDRESS,
     abi: WLG_TOKEN_ABI,
     functionName: "hasRole",
@@ -98,11 +108,8 @@ export const useWlgTokenAdmin = () => {
   });
 
   const hasReadIssue =
-    Boolean(totalSupplyRead.error) ||
-    Boolean(pausedRead.error) ||
-    Boolean(burnEnabledRead.error) ||
-    Boolean(pauseEnabledRead.error) ||
-    Boolean(idoInventoryRead.error);
+    Boolean(totalSupplyRead.error && totalSupplyRead.data === undefined) ||
+    Boolean(idoInventoryRead.error && idoInventoryRead.data === undefined);
 
   const stats = useMemo(
     () => ({
