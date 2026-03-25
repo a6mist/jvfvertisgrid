@@ -134,6 +134,12 @@ export function InvoicePaymentPage() {
     }
   };
 
+  const getReadableError = (error: unknown) => {
+    if (error instanceof Error && error.message.trim()) return error.message;
+    if (typeof error === 'string' && error.trim()) return error;
+    return 'Transaction failed. Check invoice status, allowance, balance, and network.';
+  };
+
   useEffect(() => {
     const loadInvoice = async () => {
       checkExpiredInvoices();
@@ -236,7 +242,7 @@ export function InvoicePaymentPage() {
       setTransactionState('idle');
     } catch (error) {
       console.error('Approval failed:', error);
-      toast.error('Approval failed. Please try again.');
+      toast.error(getReadableError(error));
       setTransactionState('failed');
       setTimeout(() => setTransactionState('idle'), 2000);
     }
@@ -269,7 +275,7 @@ export function InvoicePaymentPage() {
       setTransactionState('success');
     } catch (error) {
       console.error('Payment failed:', error);
-      toast.error('Payment failed. Please try again.');
+      toast.error(getReadableError(error));
       setTransactionState('failed');
       setTimeout(() => setTransactionState('idle'), 2000);
     }

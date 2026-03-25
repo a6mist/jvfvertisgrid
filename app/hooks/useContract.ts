@@ -242,6 +242,38 @@ const INVOICE_PAID_EVENT = parseAbiItem(
   'event InvoicePaid(bytes32 indexed invoiceKey, string invoiceId, address indexed payer, uint256 tokenAmount, uint256 usdtSpent)',
 );
 
+const extractErrorMessage = (error: unknown): string => {
+  const seen = new Set<unknown>();
+  const queue: unknown[] = [error];
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current || typeof current !== 'object' || seen.has(current)) continue;
+    seen.add(current);
+
+    const candidate = current as {
+      shortMessage?: unknown;
+      reason?: unknown;
+      details?: unknown;
+      message?: unknown;
+      cause?: unknown;
+      data?: unknown;
+    };
+
+    for (const key of ['shortMessage', 'reason', 'details', 'message'] as const) {
+      const value = candidate[key];
+      if (typeof value === 'string' && value.trim().length > 0) {
+        return value.trim();
+      }
+    }
+
+    if (candidate.cause) queue.push(candidate.cause);
+    if (candidate.data) queue.push(candidate.data);
+  }
+
+  return 'Transaction simulation failed. Check invoice status, allowance, balance, and network.';
+};
+
 const GET_INVOICE_TUPLE_ABI = [
   {
     name: 'getInvoice',
@@ -443,7 +475,7 @@ export const useIdoContract = () => {
       return hash;
     } catch (error) {
       console.error('Approve failed:', error);
-      throw error;
+      throw new Error(extractErrorMessage(error));
     }
   };
 
@@ -506,9 +538,19 @@ export const useIdoContract = () => {
     if (!address) throw new Error('Wallet not connected');
     if (!isContractsConfigured) throw new Error('Contract addresses are not configured');
     if (!publicClient) throw new Error('Public client not available');
+    if (!readClient) throw new Error('Read client not available');
 
     try {
       const maxUsdtAllowed = parseUnits(usdtAmount, 6);
+
+      await readClient.simulateContract({
+        address: IDO_CONTRACT_ADDRESS,
+        abi: IDO_ABI,
+        functionName: 'payInvoice',
+        args: [invoiceId, maxUsdtAllowed],
+        account: address as Address,
+      });
+
       const hash = await writeContractAsync({
         address: IDO_CONTRACT_ADDRESS,
         abi: IDO_ABI,
@@ -520,7 +562,7 @@ export const useIdoContract = () => {
       return hash;
     } catch (error) {
       console.error('Pay invoice failed:', error);
-      throw error;
+      throw new Error(extractErrorMessage(error));
     }
   };
 
