@@ -20,9 +20,42 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const { connectors, connectAsync, isPending } = useConnect();
   const { disconnect } = useDisconnect();
 
+  const isMobileClient =
+    typeof navigator !== 'undefined' && /android|iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  const isMetaMaskInAppBrowser =
+    typeof navigator !== 'undefined' && /metamask/i.test(navigator.userAgent);
+
+  const getWalletConnectConnector = () => {
+    const readyConnectors = connectors.filter((connector) => connector.ready ?? true);
+    return readyConnectors.find((connector) => {
+      const normalized = `${connector.id} ${connector.name}`.toLowerCase();
+      return normalized.includes('walletconnect');
+    });
+  };
+
+  const getMetaMaskConnector = () => {
+    const readyConnectors = connectors.filter((connector) => connector.ready ?? true);
+    return readyConnectors.find((connector) => {
+      const normalized = `${connector.id} ${connector.name}`.toLowerCase();
+      return normalized.includes('meta');
+    });
+  };
+
   const getPreferredConnector = () => {
     const readyConnectors = connectors.filter((connector) => connector.ready ?? true);
     if (readyConnectors.length === 0) return null;
+
+    // Mobile Safari should prioritize WalletConnect. MetaMask in-app browser can use injected.
+    if (isMobileClient && !isMetaMaskInAppBrowser) {
+      const walletConnect = getWalletConnectConnector();
+      if (walletConnect) return walletConnect;
+    }
+
+    if (isMetaMaskInAppBrowser) {
+      const metaMask = getMetaMaskConnector();
+      if (metaMask) return metaMask;
+    }
 
     const preferredConnectorId =
       typeof window !== 'undefined'
@@ -35,21 +68,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       if (preferredConnector) return preferredConnector;
     }
 
-    const isMobileClient =
-      typeof navigator !== 'undefined' && /android|iphone|ipad|ipod/i.test(navigator.userAgent);
+    const walletConnect = getWalletConnectConnector();
+    if (walletConnect) return walletConnect;
 
-    if (isMobileClient) {
-      const walletConnect = readyConnectors.find((connector) => {
-        const normalized = `${connector.id} ${connector.name}`.toLowerCase();
-        return normalized.includes('walletconnect');
-      });
-      if (walletConnect) return walletConnect;
-    }
-
-    const metaMask = readyConnectors.find((connector) => {
-      const normalized = `${connector.id} ${connector.name}`.toLowerCase();
-      return normalized.includes('meta');
-    });
+    const metaMask = getMetaMaskConnector();
 
     return metaMask ?? readyConnectors[0];
   };
@@ -68,16 +90,39 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const connect = async () => {
     if (isConnected) return;
 
-    const connector = getPreferredConnector();
-    if (!connector) {
+    const primaryConnector = getPreferredConnector();
+    if (!primaryConnector) {
       throw new Error('No wallet connector available. Install MetaMask or use WalletConnect.');
     }
 
-    await connectAsync({ connector });
+    const fallbackQueue = [
+      primaryConnector,
+      getWalletConnectConnector(),
+      getMetaMaskConnector(),
+      ...connectors.filter((connector) => connector.ready ?? true),
+    ].filter((connector, index, arr): connector is NonNullable<typeof connector> => {
+      if (!connector) return false;
+      return arr.findIndex((candidate) => candidate?.id === connector.id) === index;
+    });
 
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(PREFERRED_CONNECTOR_STORAGE_KEY, connector.id);
+    let lastError: unknown;
+    for (const connector of fallbackQueue) {
+      try {
+        await connectAsync({ connector });
+
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(PREFERRED_CONNECTOR_STORAGE_KEY, connector.id);
+        }
+
+        return;
+      } catch (error) {
+        lastError = error;
+      }
     }
+
+    throw lastError instanceof Error
+      ? lastError
+      : new Error('Failed to connect wallet. Please try WalletConnect or MetaMask app browser.');
   };
 
   const handleDisconnect = () => disconnect();
