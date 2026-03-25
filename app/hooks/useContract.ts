@@ -75,6 +75,27 @@ const IDO_ABI = [
     outputs: [{ type: 'uint256' }],
   },
   {
+    name: 'isBuyPaused',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'bool' }],
+  },
+  {
+    name: 'startTime',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'uint256' }],
+  },
+  {
+    name: 'endTime',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'uint256' }],
+  },
+  {
     name: 'purchased',
     type: 'function',
     stateMutability: 'view',
@@ -568,6 +589,33 @@ export const useIdoContract = () => {
     if (!readClient) throw new Error('Read client not available');
 
     try {
+      const [isBuyPaused, startTime, endTime] = (await Promise.all([
+        readClient.readContract({
+          address: IDO_CONTRACT_ADDRESS,
+          abi: IDO_ABI,
+          functionName: 'isBuyPaused',
+        }),
+        readClient.readContract({
+          address: IDO_CONTRACT_ADDRESS,
+          abi: IDO_ABI,
+          functionName: 'startTime',
+        }),
+        readClient.readContract({
+          address: IDO_CONTRACT_ADDRESS,
+          abi: IDO_ABI,
+          functionName: 'endTime',
+        }),
+      ])) as [boolean, bigint, bigint];
+
+      if (isBuyPaused) {
+        throw new Error('Invoice payment is currently paused by admin.');
+      }
+
+      const nowSeconds = BigInt(Math.floor(Date.now() / 1000));
+      if (nowSeconds < startTime || nowSeconds > endTime) {
+        throw new Error('Sale is inactive on-chain. Invoice payment is unavailable right now.');
+      }
+
       const onChainInvoice = (await readClient.readContract({
         address: IDO_CONTRACT_ADDRESS,
         abi: IDO_ABI,
@@ -602,7 +650,6 @@ export const useIdoContract = () => {
         throw new Error('Invoice is already paid.');
       }
 
-      const nowSeconds = BigInt(Math.floor(Date.now() / 1000));
       if (nowSeconds > invoiceExpiry) {
         throw new Error('Invoice is already expired.');
       }
@@ -630,6 +677,29 @@ export const useIdoContract = () => {
 
       const parsedMaxUsdt = parseUnits(usdtAmount, 6);
       const maxUsdtAllowed = parsedMaxUsdt < invoiceUsdtAmount ? invoiceUsdtAmount : parsedMaxUsdt;
+
+      const [currentAllowance, currentUsdtBalance] = (await Promise.all([
+        readClient.readContract({
+          address: USDT_CONTRACT_ADDRESS,
+          abi: USDT_ABI,
+          functionName: 'allowance',
+          args: [address as Address, IDO_CONTRACT_ADDRESS],
+        }),
+        readClient.readContract({
+          address: USDT_CONTRACT_ADDRESS,
+          abi: USDT_ABI,
+          functionName: 'balanceOf',
+          args: [address as Address],
+        }),
+      ])) as [bigint, bigint];
+
+      if (currentUsdtBalance < invoiceUsdtAmount) {
+        throw new Error('Insufficient USDT balance for this invoice.');
+      }
+
+      if (currentAllowance < invoiceUsdtAmount) {
+        throw new Error('USDT allowance is lower than invoice amount. Please approve again.');
+      }
 
       await readClient.simulateContract({
         address: IDO_CONTRACT_ADDRESS,
