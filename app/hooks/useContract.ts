@@ -235,6 +235,9 @@ const TOKENS_PURCHASED_EVENT = parseAbiItem(
 const TOKENS_CLAIMED_EVENT = parseAbiItem(
   'event TokensClaimed(address indexed claimer, uint256 amount)',
 );
+const INVOICE_CREATED_EVENT = parseAbiItem(
+  'event InvoiceCreated(bytes32 indexed invoiceKey, string invoiceId, uint256 usdtAmount, uint256 tokenAmount, uint256 expiryDate, address indexed recipientWallet)',
+);
 const INVOICE_PAID_EVENT = parseAbiItem(
   'event InvoicePaid(bytes32 indexed invoiceKey, string invoiceId, address indexed payer, uint256 tokenAmount, uint256 usdtSpent)',
 );
@@ -629,6 +632,38 @@ export const useIdoContract = () => {
     }
   };
 
+  const getCreatedInvoiceIds = async (): Promise<string[]> => {
+    if (!isContractsConfigured || !readClient) return [];
+
+    try {
+      const logs = await readClient.getLogs({
+        address: IDO_CONTRACT_ADDRESS,
+        event: INVOICE_CREATED_EVENT,
+        fromBlock: 0n,
+        toBlock: 'latest',
+      });
+
+      const seen = new Set<string>();
+      const invoiceIds: string[] = [];
+
+      // Newest-first, unique IDs.
+      for (let index = logs.length - 1; index >= 0; index -= 1) {
+        const invoiceId = (logs[index].args as Record<string, unknown> | undefined)?.invoiceId;
+        if (typeof invoiceId !== 'string' || invoiceId.length === 0 || seen.has(invoiceId)) {
+          continue;
+        }
+
+        seen.add(invoiceId);
+        invoiceIds.push(invoiceId);
+      }
+
+      return invoiceIds;
+    } catch (error) {
+      console.error('Failed to read invoice creation logs:', error);
+      return [];
+    }
+  };
+
   const createInvoice = async (params: {
     invoiceId: string;
     usdtAmount: string;
@@ -789,6 +824,7 @@ export const useIdoContract = () => {
     createInvoice,
     getOnChainInvoice,
     getInvoicePaymentTxHash,
+    getCreatedInvoiceIds,
     claimTokens,
     simulateBuy,
     getUserActivity,

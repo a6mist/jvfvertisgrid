@@ -20,7 +20,7 @@ export function InvoiceManagement() {
   const [isLoading, setIsLoading] = useState(true);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [syncMap, setSyncMap] = useState<Record<string, boolean>>({});
-  const { getOnChainInvoice, getInvoicePaymentTxHash } = useIdoContract();
+  const { getOnChainInvoice, getInvoicePaymentTxHash, getCreatedInvoiceIds } = useIdoContract();
   const { address, connect, isConnecting } = useWallet();
   const isAllowedWallet =
     Boolean(address) &&
@@ -42,8 +42,28 @@ export function InvoiceManagement() {
     checkExpiredInvoices();
     const localInvoices = getInvoices();
 
+    const chainInvoiceIds = isContractsConfigured ? await getCreatedInvoiceIds() : [];
+    const knownIds = new Set<string>([
+      ...localInvoices.map((invoice) => invoice.id),
+      ...chainInvoiceIds,
+    ]);
+
+    const invoiceSeeds: Invoice[] = Array.from(knownIds).map((invoiceId) => {
+      const localMatch = localInvoices.find((invoice) => invoice.id === invoiceId);
+      if (localMatch) return localMatch;
+
+      return {
+        id: invoiceId,
+        amount: 0,
+        tokenAmount: 0,
+        status: 'pending',
+        createdDate: new Date().toISOString(),
+        expiryDate: new Date().toISOString(),
+      };
+    });
+
     const mergedWithSync = await Promise.all(
-      localInvoices.map(async (localInvoice) => {
+      invoiceSeeds.map(async (localInvoice) => {
         const onChainInvoice = await getOnChainInvoice(localInvoice.id);
         if (!onChainInvoice) {
           return { invoice: localInvoice, chainSynced: false };
