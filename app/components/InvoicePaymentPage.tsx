@@ -9,6 +9,8 @@ import { useAccount, useBalance } from 'wagmi';
 
 type TransactionState = 'idle' | 'approving' | 'pending' | 'success' | 'failed';
 
+const USDT_COMPARISON_EPSILON = 0.0001;
+
 export function InvoicePaymentPage() {
   const { invoiceId } = useParams();
   const { address, balance, isConnecting, connect, disconnect } = useWallet();
@@ -28,6 +30,7 @@ export function InvoicePaymentPage() {
   const [isLoadingInvoice, setIsLoadingInvoice] = useState(true);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [isTopUpOpen, setIsTopUpOpen] = useState(false);
+  const [allowPayDuringSync, setAllowPayDuringSync] = useState(false);
   const [transakAmount, setTransakAmount] = useState('100');
   const displayUsdtBalance = Number(stats.usdtBalance || 0);
   const rawEthBalance = nativeBalanceData ? Number(nativeBalanceData.formatted) : 0;
@@ -249,6 +252,7 @@ export function InvoicePaymentPage() {
     setTransactionState('approving');
     try {
       await approveUsdt(invoice.amount.toString());
+      setAllowPayDuringSync(true);
       toast.success('USDT approval submitted');
       setTransactionState('idle');
     } catch (error) {
@@ -292,9 +296,25 @@ export function InvoicePaymentPage() {
     }
   };
 
-  const needsApproval = invoice
-    ? parseFloat(stats.usdtAllowance || '0') < invoice.amount
-    : true;
+  const invoiceAmount = invoice?.amount ?? 0;
+  const hasEnoughUsdtBalance = displayUsdtBalance + USDT_COMPARISON_EPSILON >= invoiceAmount;
+  const currentAllowance = Number(stats.usdtAllowance || 0);
+  const hasEnoughAllowance = currentAllowance + USDT_COMPARISON_EPSILON >= invoiceAmount;
+
+  useEffect(() => {
+    if (!allowPayDuringSync) return;
+    if (hasEnoughAllowance) {
+      setAllowPayDuringSync(false);
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setAllowPayDuringSync(false), 45000);
+    return () => window.clearTimeout(timeout);
+  }, [allowPayDuringSync, hasEnoughAllowance]);
+
+  const needsApproval = invoice ? !hasEnoughAllowance : true;
+  const canPayWithCurrentState =
+    Boolean(invoice) && hasEnoughUsdtBalance && (!needsApproval || allowPayDuringSync);
 
   if (isLoadingInvoice) {
     return (
@@ -559,7 +579,7 @@ export function InvoicePaymentPage() {
                 </div>
               )}
 
-              {displayUsdtBalance < invoice.amount && (
+              {!hasEnoughUsdtBalance && (
                 <div className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/30">
                   <button
                     type="button"
@@ -731,13 +751,18 @@ export function InvoicePaymentPage() {
                     disabled={
                       transactionState !== 'idle' ||
                       isWrongNetwork ||
-                      displayUsdtBalance < invoice.amount ||
-                      needsApproval
+                      !canPayWithCurrentState
                     }
                     className="w-full py-4 rounded-xl bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] text-white font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ boxShadow: '0 0 30px rgba(108, 92, 231, 0.3)' }}
                   >
-                    {displayUsdtBalance < invoice.amount ? 'Insufficient Balance' : needsApproval ? 'Approve USDT First' : '2. Pay Now'}
+                    {!hasEnoughUsdtBalance
+                      ? 'Insufficient Balance'
+                      : needsApproval && allowPayDuringSync
+                      ? 'Allowance syncing... Tap Pay'
+                      : needsApproval
+                      ? 'Approve USDT First'
+                      : '2. Pay Now'}
                   </button>
                 </div>
               )}
