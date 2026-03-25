@@ -263,7 +263,6 @@ export function InvoicePaymentPage() {
       console.error('Approval failed:', error);
       toast.error(getReadableError(error));
       setTransactionState('failed');
-      setTimeout(() => setTransactionState('idle'), 2000);
     }
   };
 
@@ -296,7 +295,6 @@ export function InvoicePaymentPage() {
       console.error('Payment failed:', error);
       toast.error(getReadableError(error));
       setTransactionState('failed');
-      setTimeout(() => setTransactionState('idle'), 2000);
     }
   };
 
@@ -315,6 +313,12 @@ export function InvoicePaymentPage() {
     const timeout = window.setTimeout(() => setAllowPayDuringSync(false), 45000);
     return () => window.clearTimeout(timeout);
   }, [allowPayDuringSync, hasEnoughAllowance]);
+
+  useEffect(() => {
+    if (transactionState !== 'failed') return;
+    const timeout = window.setTimeout(() => setTransactionState('idle'), 2000);
+    return () => window.clearTimeout(timeout);
+  }, [transactionState]);
 
   const needsApproval = invoice ? !hasEnoughAllowance : true;
   const canPayWithCurrentState =
@@ -739,7 +743,7 @@ export function InvoicePaymentPage() {
               )}
 
               {/* Payment Buttons */}
-              {transactionState === 'idle' && (
+              {(transactionState === 'idle' || transactionState === 'failed') && (
                 <div className="space-y-3">
                   <button
                     type="button"
