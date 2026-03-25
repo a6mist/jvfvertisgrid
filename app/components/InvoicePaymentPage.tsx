@@ -19,6 +19,7 @@ export function InvoicePaymentPage() {
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [isLoadingInvoice, setIsLoadingInvoice] = useState(true);
+  const displayUsdtBalance = Number(stats.usdtBalance || 0);
 
   const copyText = async (text: string) => {
     try {
@@ -393,7 +394,7 @@ export function InvoicePaymentPage() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-400">USDT Balance</span>
-                  <span className="text-lg font-semibold text-white">{balance.toFixed(2)} USDT</span>
+                  <span className="text-lg font-semibold text-white">{displayUsdtBalance.toFixed(2)} USDT</span>
                 </div>
               </div>
 
@@ -408,11 +409,11 @@ export function InvoicePaymentPage() {
                   </button>
                   <button
                     onClick={handlePay}
-                    disabled={balance < invoice.amount || needsApproval}
+                    disabled={displayUsdtBalance < invoice.amount || needsApproval}
                     className="w-full py-4 rounded-xl bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] text-white font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ boxShadow: '0 0 30px rgba(108, 92, 231, 0.3)' }}
                   >
-                    {balance < invoice.amount ? 'Insufficient Balance' : needsApproval ? 'Approve USDT First' : '2. Pay Now'}
+                    {displayUsdtBalance < invoice.amount ? 'Insufficient Balance' : needsApproval ? 'Approve USDT First' : '2. Pay Now'}
                   </button>
                 </div>
               )}
