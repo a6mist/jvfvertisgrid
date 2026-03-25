@@ -248,6 +248,10 @@ export function InvoicePaymentPage() {
       toast.error('Switch wallet network to Ethereum Mainnet before approving USDT.');
       return;
     }
+    if (!needsApproval) {
+      toast.info('USDT is already approved. You can proceed with Pay Now.');
+      return;
+    }
 
     setTransactionState('approving');
     try {
@@ -740,10 +744,10 @@ export function InvoicePaymentPage() {
                   <button
                     type="button"
                     onClick={() => void handleApprove()}
-                    disabled={transactionState !== 'idle' || isWrongNetwork}
+                    disabled={transactionState !== 'idle' || isWrongNetwork || !needsApproval}
                     className="w-full py-4 rounded-xl bg-white/10 border border-white/20 text-white font-semibold hover:bg-white/15 transition-all"
                   >
-                    1. Approve USDT
+                    {needsApproval ? '1. Approve USDT' : '1. Approved'}
                   </button>
                   <button
                     type="button"

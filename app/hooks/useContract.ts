@@ -469,6 +469,10 @@ export const useIdoContract = () => {
         args: [address as Address, IDO_CONTRACT_ADDRESS],
       })) as bigint;
 
+      if (currentAllowance >= targetAllowance) {
+        return null;
+      }
+
       // USDT-style tokens can reject non-zero -> non-zero approve updates.
       if (currentAllowance > 0n && targetAllowance > 0n) {
         const resetHash = await writeContractAsync({
