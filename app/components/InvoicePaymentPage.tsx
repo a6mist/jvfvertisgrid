@@ -645,14 +645,17 @@ export function InvoicePaymentPage() {
               {transactionState === 'idle' && (
                 <div className="space-y-3">
                   <button
-                    onClick={handleApprove}
+                    type="button"
+                    onClick={() => void handleApprove()}
+                    disabled={transactionState !== 'idle'}
                     className="w-full py-4 rounded-xl bg-white/10 border border-white/20 text-white font-semibold hover:bg-white/15 transition-all"
                   >
                     1. Approve USDT
                   </button>
                   <button
-                    onClick={handlePay}
-                    disabled={displayUsdtBalance < invoice.amount || needsApproval}
+                    type="button"
+                    onClick={() => void handlePay()}
+                    disabled={transactionState !== 'idle' || displayUsdtBalance < invoice.amount || needsApproval}
                     className="w-full py-4 rounded-xl bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] text-white font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ boxShadow: '0 0 30px rgba(108, 92, 231, 0.3)' }}
                   >
