@@ -115,7 +115,7 @@ export const Portfolio = () => {
               <p className="text-3xl font-bold text-[#00F5D4] mb-1">
                 {totalTokens.toLocaleString()}
               </p>
-              <p className="text-sm text-gray-400">WL Tokens</p>
+              <p className="text-sm text-gray-400">WLG Tokens</p>
             </div>
             <div className="p-3 rounded-xl bg-gradient-to-br from-[#6C5CE7]/20 to-[#00F5D4]/20">
               <Gift className="w-6 h-6 text-[#00F5D4]" />
@@ -178,7 +178,7 @@ export const Portfolio = () => {
                     <div>
                       <p className="text-sm text-gray-400 mb-1">Available to Claim</p>
                       <p className="text-2xl font-bold text-[#00F5D4]">
-                        {stats.userClaimed ? '0' : totalTokens.toLocaleString()} WL
+                        {stats.userClaimed ? '0' : totalTokens.toLocaleString()} WLG
                       </p>
                     </div>
                     <div>
@@ -259,7 +259,7 @@ export const Portfolio = () => {
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-[#00F5D4]">
-                        {parseFloat(tx.amount).toLocaleString()} WL
+                        {parseFloat(tx.amount).toLocaleString()} WLG
                       </p>
                       <p className="text-sm text-gray-400">
                         {tx.type === 'purchase' ? `$${parseFloat(tx.usdtAmount || '0').toFixed(2)}` : 'Claimed'}
@@ -298,7 +298,7 @@ export const Portfolio = () => {
               {[
                 {
                   label: 'Purchased Tokens',
-                  detail: `${totalTokens.toLocaleString()} WL recorded`,
+                  detail: `${totalTokens.toLocaleString()} WLG recorded`,
                   status: totalTokens > 0 ? 'claimed' : 'locked',
                 },
                 {

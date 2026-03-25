@@ -317,7 +317,7 @@ export function InvoicePaymentPage() {
             
             <div className="flex justify-between items-center p-4 rounded-xl bg-white/5">
               <span className="text-gray-400">Token Amount</span>
-              <span className="text-xl font-semibold text-[#00F5D4]">{invoice.tokenAmount.toLocaleString()} WRL</span>
+              <span className="text-xl font-semibold text-[#00F5D4]">{invoice.tokenAmount.toLocaleString()} WLG</span>
             </div>
 
             {invoice.status === 'pending' && (
@@ -477,7 +477,7 @@ export function InvoicePaymentPage() {
 
               <div className="p-4 rounded-xl bg-white/5">
                 <span className="text-sm text-gray-400 block mb-1">Tokens Allocated</span>
-                <span className="text-2xl font-bold text-[#00F5D4]">{invoice.tokenAmount.toLocaleString()} WRL</span>
+                <span className="text-2xl font-bold text-[#00F5D4]">{invoice.tokenAmount.toLocaleString()} WLG</span>
               </div>
             </div>
 

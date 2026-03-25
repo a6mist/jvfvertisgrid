@@ -364,7 +364,7 @@ export function InvoiceManagement() {
                       <div className="text-white font-semibold">{invoice.amount.toLocaleString()} USDT</div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-[#00F5D4] font-semibold">{invoice.tokenAmount.toLocaleString()} WRL</div>
+                      <div className="text-[#00F5D4] font-semibold">{invoice.tokenAmount.toLocaleString()} WLG</div>
                     </td>
                     <td className="px-6 py-4">
                       {getStatusBadge(invoice.status)}

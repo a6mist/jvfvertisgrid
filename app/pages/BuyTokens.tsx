@@ -184,7 +184,7 @@ export const BuyTokens = () => {
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-gray-400">You will receive:</span>
                     <span className="text-2xl font-bold text-[#00F5D4]">
-                      {simulation.tokensReceived} WL
+                      {simulation.tokensReceived} WLG
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
@@ -285,7 +285,7 @@ export const BuyTokens = () => {
               <div>
                 <p className="text-sm text-gray-400 mb-1">Total Sold</p>
                 <p className="text-xl font-semibold">
-                  {parseFloat(stats.totalSold).toLocaleString()} WL
+                  {parseFloat(stats.totalSold).toLocaleString()} WLG
                 </p>
               </div>
               <div>
@@ -305,7 +305,7 @@ export const BuyTokens = () => {
                 <div>
                   <p className="text-sm text-gray-400 mb-1">Purchased</p>
                   <p className="text-2xl font-bold text-[#00F5D4]">
-                    {parseFloat(stats.userPurchased).toLocaleString()} WL
+                    {parseFloat(stats.userPurchased).toLocaleString()} WLG
                   </p>
                 </div>
                 <div>

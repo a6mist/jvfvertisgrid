@@ -232,7 +232,7 @@ export function InvoiceGenerator() {
           {/* Token Amount */}
           <div>
             <label className="block text-sm font-semibold text-gray-300 mb-2">
-              Token Amount (WRL)
+              Token Amount (WLG)
             </label>
             <div className="relative">
               <input
@@ -244,7 +244,7 @@ export function InvoiceGenerator() {
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-500">
                 {invoiceSimulation
-                  ? `Live Buy Price: $${invoiceSimulation.pricePerToken} per WRL`
+                  ? `Live Buy Price: $${invoiceSimulation.pricePerToken} per WLG`
                   : 'Live Buy Price'}
               </span>
             </div>
@@ -349,7 +349,7 @@ export function InvoiceGenerator() {
                 </div>
                 <div>
                   <span className="text-gray-400 block mb-1">Tokens</span>
-                  <span className="text-[#00F5D4] font-semibold">{generatedInvoice.tokenAmount} WRL</span>
+                  <span className="text-[#00F5D4] font-semibold">{generatedInvoice.tokenAmount} WLG</span>
                 </div>
                 <div>
                   <span className="text-gray-400 block mb-1">Expires</span>
