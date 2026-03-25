@@ -334,6 +334,16 @@ const GET_INVOICE_TUPLE_ABI = [
   },
 ] as const;
 
+const PAY_INVOICE_LEGACY_ABI = [
+  {
+    name: 'payInvoice',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [{ type: 'string', name: 'invoiceId' }],
+    outputs: [],
+  },
+] as const;
+
 export const useIdoContract = () => {
   const { address, isConnected } = useAccount();
   const { writeContractAsync } = useWriteContract();
@@ -716,6 +726,8 @@ export const useIdoContract = () => {
         throw new Error('USDT allowance is lower than invoice amount. Please approve again.');
       }
 
+      let hash: `0x${string}`;
+
       try {
         await readClient.simulateContract({
           address: IDO_CONTRACT_ADDRESS,
@@ -724,17 +736,32 @@ export const useIdoContract = () => {
           args: [invoiceId, maxUsdtAllowed],
           account: address as Address,
         });
+
+        hash = await writeContractAsync({
+          address: IDO_CONTRACT_ADDRESS,
+          abi: IDO_ABI,
+          functionName: 'payInvoice',
+          args: [invoiceId, maxUsdtAllowed],
+        });
       } catch (simulationError) {
         console.error('payInvoice simulation failed:', simulationError);
-        throw simulationError;
-      }
+        console.log('Retrying legacy payInvoice(string) signature...');
 
-      const hash = await writeContractAsync({
-        address: IDO_CONTRACT_ADDRESS,
-        abi: IDO_ABI,
-        functionName: 'payInvoice',
-        args: [invoiceId, maxUsdtAllowed],
-      });
+        await readClient.simulateContract({
+          address: IDO_CONTRACT_ADDRESS,
+          abi: PAY_INVOICE_LEGACY_ABI,
+          functionName: 'payInvoice',
+          args: [invoiceId],
+          account: address as Address,
+        });
+
+        hash = await writeContractAsync({
+          address: IDO_CONTRACT_ADDRESS,
+          abi: PAY_INVOICE_LEGACY_ABI,
+          functionName: 'payInvoice',
+          args: [invoiceId],
+        });
+      }
 
       await publicClient.waitForTransactionReceipt({ hash });
       return hash;
