@@ -245,10 +245,6 @@ export function InvoicePaymentPage() {
       toast.error('Switch wallet network to Ethereum Mainnet before approving USDT.');
       return;
     }
-    if (!hasGasBalance) {
-      toast.error('Insufficient ETH for gas. Add a small ETH balance before approving USDT.');
-      return;
-    }
 
     setTransactionState('approving');
     try {
@@ -267,10 +263,6 @@ export function InvoicePaymentPage() {
     if (!invoice || !address) return;
     if (isWrongNetwork) {
       toast.error('Switch wallet network to Ethereum Mainnet before paying.');
-      return;
-    }
-    if (!hasGasBalance) {
-      toast.error('Insufficient ETH for gas. Add a small ETH balance before paying.');
       return;
     }
     
@@ -558,14 +550,6 @@ export function InvoicePaymentPage() {
                   </span>
                 </div>
               </div>
-
-              {!hasGasBalance && (
-                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30">
-                  <p className="text-sm text-red-200">
-                    No ETH detected for gas fees. Add a small ETH amount before Approve/Pay.
-                  </p>
-                </div>
-              )}
 
               {isWrongNetwork && (
                 <div className="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30">
