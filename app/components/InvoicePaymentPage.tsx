@@ -19,7 +19,6 @@ export function InvoicePaymentPage() {
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [isLoadingInvoice, setIsLoadingInvoice] = useState(true);
-  const [hasAutoRedirectedToFunding, setHasAutoRedirectedToFunding] = useState(false);
   const displayUsdtBalance = Number(stats.usdtBalance || 0);
   const locale = typeof navigator !== 'undefined' ? navigator.language : 'en';
   const regionCode = locale.includes('-') ? locale.split('-')[1].toUpperCase() : '';
@@ -199,31 +198,6 @@ export function InvoicePaymentPage() {
 
     return () => clearInterval(interval);
   }, [invoice]);
-
-  useEffect(() => {
-    if (!invoice || invoice.status !== 'pending' || !address || isConnecting) return;
-    if (hasAutoRedirectedToFunding) return;
-
-    const hasEnoughUsdt = displayUsdtBalance >= invoice.amount;
-    if (hasEnoughUsdt) return;
-
-    const isHighValueInvoice = invoice.amount >= transakOtcThreshold;
-
-    setHasAutoRedirectedToFunding(true);
-    toast.info(
-      isHighValueInvoice
-        ? 'Insufficient USDT detected. Redirecting to Transak OTC for high-value funding.'
-        : 'Insufficient USDT detected. Redirecting to MoonPay funding.',
-    );
-    redirectToFunding(isHighValueInvoice ? 'transakOtc' : 'moonpay');
-  }, [
-    address,
-    displayUsdtBalance,
-    hasAutoRedirectedToFunding,
-    invoice,
-    isConnecting,
-    transakOtcThreshold,
-  ]);
 
   const handleApprove = async () => {
     if (!invoice || !address) return;
