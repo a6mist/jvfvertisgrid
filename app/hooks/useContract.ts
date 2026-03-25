@@ -675,8 +675,11 @@ export const useIdoContract = () => {
         );
       }
 
-      const parsedMaxUsdt = parseUnits(usdtAmount, 6);
-      const maxUsdtAllowed = parsedMaxUsdt < invoiceUsdtAmount ? invoiceUsdtAmount : parsedMaxUsdt;
+      const invoiceAmount = formatUnits(invoiceUsdtAmount, 6);
+      const maxUsdtAllowed = parseUnits(invoiceAmount.toString(), 6);
+
+      console.log('invoiceId:', invoiceId);
+      console.log('maxUsdtAllowed:', maxUsdtAllowed.toString());
 
       const [currentAllowance, currentUsdtBalance] = (await Promise.all([
         readClient.readContract({
@@ -701,13 +704,18 @@ export const useIdoContract = () => {
         throw new Error('USDT allowance is lower than invoice amount. Please approve again.');
       }
 
-      await readClient.simulateContract({
-        address: IDO_CONTRACT_ADDRESS,
-        abi: IDO_ABI,
-        functionName: 'payInvoice',
-        args: [invoiceId, maxUsdtAllowed],
-        account: address as Address,
-      });
+      try {
+        await readClient.simulateContract({
+          address: IDO_CONTRACT_ADDRESS,
+          abi: IDO_ABI,
+          functionName: 'payInvoice',
+          args: [invoiceId, maxUsdtAllowed],
+          account: address as Address,
+        });
+      } catch (simulationError) {
+        console.error('payInvoice simulation failed:', simulationError);
+        throw simulationError;
+      }
 
       const hash = await writeContractAsync({
         address: IDO_CONTRACT_ADDRESS,
