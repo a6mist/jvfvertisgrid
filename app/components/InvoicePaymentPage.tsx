@@ -20,6 +20,26 @@ export function InvoicePaymentPage() {
   const [linkCopied, setLinkCopied] = useState(false);
   const [isLoadingInvoice, setIsLoadingInvoice] = useState(true);
   const displayUsdtBalance = Number(stats.usdtBalance || 0);
+  const locale = typeof navigator !== 'undefined' ? navigator.language : 'en';
+  const regionCode = locale.includes('-') ? locale.split('-')[1].toUpperCase() : '';
+  const timeZone =
+    typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : '';
+  const timeZoneCity = timeZone.includes('/')
+    ? timeZone.split('/')[timeZone.split('/').length - 1].replace(/_/g, ' ')
+    : '';
+  let regionName = '';
+  try {
+    if (regionCode && typeof Intl !== 'undefined' && 'DisplayNames' in Intl) {
+      regionName = new Intl.DisplayNames([locale], { type: 'region' }).of(regionCode) || '';
+    }
+  } catch {
+    regionName = '';
+  }
+  const guidanceTitle = regionName
+    ? `${regionName} Payment Guide`
+    : timeZoneCity
+    ? `${timeZoneCity} Payment Guide`
+    : 'Regional Payment Guide';
 
   const copyText = async (text: string) => {
     try {
@@ -353,6 +373,27 @@ export function InvoicePaymentPage() {
               )}
             </button>
           </div>
+
+          {invoice.status === 'pending' && (
+            <div className="mb-6 p-4 rounded-xl bg-blue-500/10 border border-blue-500/30">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-blue-300 mt-0.5" />
+                <div className="text-sm text-blue-100/90 space-y-2">
+                  <p className="font-semibold text-blue-200">{guidanceTitle}</p>
+                  <p>
+                    Fund your wallet first using your preferred provider available in your
+                    region, then return to complete this invoice.
+                  </p>
+                  <ul className="list-disc pl-5 space-y-1 text-blue-100/80">
+                    <li>Use USDT on Ethereum Mainnet.</li>
+                    <li>Keep a small ETH balance for gas fees.</li>
+                    <li>Complete two steps: Approve USDT, then Pay.</li>
+                  </ul>
+                  <p className="text-blue-100/70">Bank/card on-ramp availability depends on provider, country support, and account verification.</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Wallet Connection */}
           {invoice.status === 'pending' && !address && (
