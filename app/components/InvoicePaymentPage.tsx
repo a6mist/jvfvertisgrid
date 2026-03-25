@@ -213,9 +213,9 @@ export function InvoicePaymentPage() {
     toast.info(
       isHighValueInvoice
         ? 'Insufficient USDT detected. Redirecting to Transak OTC for high-value funding.'
-        : 'Insufficient USDT detected. Redirecting to Transak funding.',
+        : 'Insufficient USDT detected. Redirecting to MoonPay funding.',
     );
-    redirectToFunding(isHighValueInvoice ? 'transakOtc' : 'transak');
+    redirectToFunding(isHighValueInvoice ? 'transakOtc' : 'moonpay');
   }, [
     address,
     displayUsdtBalance,
@@ -522,8 +522,15 @@ export function InvoicePaymentPage() {
                   <div className="flex flex-col sm:flex-row gap-2">
                     <button
                       type="button"
-                      onClick={() => redirectToFunding('transakOtc')}
+                      onClick={() => redirectToFunding('moonpay')}
                       className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] text-white text-sm font-medium hover:opacity-90 transition-opacity"
+                    >
+                      Fund with MoonPay
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => redirectToFunding('transakOtc')}
+                      className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm hover:bg-white/15 transition-colors"
                     >
                       Use Transak OTC
                     </button>
@@ -533,13 +540,6 @@ export function InvoicePaymentPage() {
                       className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm hover:bg-white/15 transition-colors"
                     >
                       Fund with Transak
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => redirectToFunding('moonpay')}
-                      className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm hover:bg-white/15 transition-colors"
-                    >
-                      Fund with MoonPay
                     </button>
                     <button
                       type="button"
