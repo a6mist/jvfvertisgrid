@@ -69,13 +69,12 @@ export function InvoicePaymentPage() {
     return `https://global.transak.com?${params.toString()}`;
   };
 
-  const transakUrl = buildTransakUrl(String(Math.floor(normalizedTransakAmount)));
-  const transakFallbackUrl = 'https://transak.com/buy/usdt';
-  const transakOtcUrl = 'https://transak.com/otc';
-
   const requiredTopUpAmount = Math.max(invoice ? invoice.amount - displayUsdtBalance : 0, 0);
   const normalizedTransakAmount = Math.max(Number(transakAmount || 0), 0);
   const estimatedUsdtAfterFees = normalizedTransakAmount * 0.9367;
+  const transakUrl = buildTransakUrl(String(Math.floor(normalizedTransakAmount)));
+  const transakFallbackUrl = 'https://transak.com/buy/usdt';
+  const transakOtcUrl = 'https://transak.com/otc';
 
   useEffect(() => {
     if (!address || !invoice || requiredTopUpAmount <= 0) return;
