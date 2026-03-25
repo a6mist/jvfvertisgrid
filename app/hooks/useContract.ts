@@ -145,22 +145,17 @@ const IDO_ABI = [
     stateMutability: 'view',
     inputs: [{ type: 'string', name: 'invoiceId' }],
     outputs: [
-      {
-        type: 'tuple',
-        components: [
-          { type: 'bool', name: 'exists' },
-          { type: 'bool', name: 'paid' },
-          { type: 'string', name: 'invoiceId' },
-          { type: 'uint256', name: 'usdtAmount' },
-          { type: 'uint256', name: 'tokenAmount' },
-          { type: 'uint256', name: 'expiryDate' },
-          { type: 'address', name: 'recipientWallet' },
-          { type: 'string', name: 'notes' },
-          { type: 'address', name: 'payer' },
-          { type: 'uint256', name: 'paidAt' },
-          { type: 'uint256', name: 'usdtSpent' },
-        ],
-      },
+      { type: 'bool', name: 'exists' },
+      { type: 'bool', name: 'paid' },
+      { type: 'string', name: 'invoiceId' },
+      { type: 'uint256', name: 'usdtAmount' },
+      { type: 'uint256', name: 'tokenAmount' },
+      { type: 'uint256', name: 'expiryDate' },
+      { type: 'address', name: 'recipientWallet' },
+      { type: 'string', name: 'notes' },
+      { type: 'address', name: 'payer' },
+      { type: 'uint256', name: 'paidAt' },
+      { type: 'uint256', name: 'usdtSpent' },
     ],
   },
   {
@@ -243,6 +238,33 @@ const TOKENS_CLAIMED_EVENT = parseAbiItem(
 const INVOICE_PAID_EVENT = parseAbiItem(
   'event InvoicePaid(bytes32 indexed invoiceKey, string invoiceId, address indexed payer, uint256 tokenAmount, uint256 usdtSpent)',
 );
+
+const GET_INVOICE_TUPLE_ABI = [
+  {
+    name: 'getInvoice',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ type: 'string', name: 'invoiceId' }],
+    outputs: [
+      {
+        type: 'tuple',
+        components: [
+          { type: 'bool', name: 'exists' },
+          { type: 'bool', name: 'paid' },
+          { type: 'string', name: 'invoiceId' },
+          { type: 'uint256', name: 'usdtAmount' },
+          { type: 'uint256', name: 'tokenAmount' },
+          { type: 'uint256', name: 'expiryDate' },
+          { type: 'address', name: 'recipientWallet' },
+          { type: 'string', name: 'notes' },
+          { type: 'address', name: 'payer' },
+          { type: 'uint256', name: 'paidAt' },
+          { type: 'uint256', name: 'usdtSpent' },
+        ],
+      },
+    ],
+  },
+] as const;
 
 export const useIdoContract = () => {
   const { address, isConnected } = useAccount();
@@ -538,8 +560,48 @@ export const useIdoContract = () => {
         usdtSpent: formatUnits(rawInvoice[10], 6),
       };
     } catch (error) {
-      console.error('Failed to read on-chain invoice:', error);
-      return null;
+      // Some deployed versions return InvoiceData as a tuple struct.
+      try {
+        const tupleResult = (await readClient.readContract({
+          address: IDO_CONTRACT_ADDRESS,
+          abi: GET_INVOICE_TUPLE_ABI,
+          functionName: 'getInvoice',
+          args: [invoiceId],
+        })) as unknown;
+
+        const tupleInvoice = (Array.isArray(tupleResult) ? tupleResult[0] : tupleResult) as {
+          exists: boolean;
+          paid: boolean;
+          invoiceId: string;
+          usdtAmount: bigint;
+          tokenAmount: bigint;
+          expiryDate: bigint;
+          recipientWallet: Address;
+          notes: string;
+          payer: Address;
+          paidAt: bigint;
+          usdtSpent: bigint;
+        };
+
+        if (!tupleInvoice?.exists) return null;
+
+        return {
+          exists: tupleInvoice.exists,
+          paid: tupleInvoice.paid,
+          invoiceId: tupleInvoice.invoiceId,
+          usdtAmount: formatUnits(tupleInvoice.usdtAmount, 6),
+          tokenAmount: formatUnits(tupleInvoice.tokenAmount, 18),
+          expiryDate: Number(tupleInvoice.expiryDate),
+          recipientWallet: tupleInvoice.recipientWallet,
+          notes: tupleInvoice.notes,
+          payer: tupleInvoice.payer,
+          paidAt: Number(tupleInvoice.paidAt),
+          usdtSpent: formatUnits(tupleInvoice.usdtSpent, 6),
+        };
+      } catch (fallbackError) {
+        console.error('Failed to read on-chain invoice:', fallbackError);
+        return null;
+      }
     }
   };
 

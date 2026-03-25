@@ -11,6 +11,7 @@ const bscRpcUrl =
   import.meta.env.VITE_BSC_RPC_URL || 'https://bsc-rpc.publicnode.com';
 const polygonRpcUrl =
   import.meta.env.VITE_POLYGON_RPC_URL || 'https://polygon-bor-rpc.publicnode.com';
+const appUrl = import.meta.env.VITE_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'https://www.wearelegend.online');
 
 export const config = createConfig({
   chains: [mainnet, bsc, polygon],
@@ -24,7 +25,7 @@ export const config = createConfig({
       metadata: {
         name: 'wearelegend',
         description: 'Web3 IDO Launchpad',
-        url: 'https://www.wearelegend.online',
+        url: appUrl,
         icons: ['https://www.wearelegend.online/logo.png']
       }
     }),
