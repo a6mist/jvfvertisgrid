@@ -144,6 +144,18 @@ const IDO_ABI = [
     ],
   },
   {
+    name: 'simulateBuy',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ type: 'uint256', name: 'desiredTokens' }],
+    outputs: [
+      { type: 'uint256', name: 'totalCost' },
+      { type: 'uint256', name: 'finalTier' },
+      { type: 'uint256[]', name: 'tierAmounts' },
+      { type: 'uint256[]', name: 'tierPrices' },
+    ],
+  },
+  {
     name: 'buyWithExactUSDT',
     type: 'function',
     stateMutability: 'nonpayable',
@@ -661,17 +673,17 @@ export const useIdoContract = () => {
         throw new Error('Connected wallet is not authorized to pay this invoice.');
       }
 
-      const quoteForInvoiceUsdt = (await readClient.readContract({
+      const quoteForInvoiceTokens = (await readClient.readContract({
         address: IDO_CONTRACT_ADDRESS,
         abi: IDO_ABI,
-        functionName: 'simulateBuyWithUSDT',
-        args: [invoiceUsdtAmount],
-      })) as unknown as [bigint, bigint, bigint[], bigint[], bigint];
+        functionName: 'simulateBuy',
+        args: [invoiceTokenAmount],
+      })) as unknown as [bigint, bigint, bigint[], bigint[]];
 
-      const purchasableTokensForInvoiceUsdt = quoteForInvoiceUsdt[0];
-      if (purchasableTokensForInvoiceUsdt < invoiceTokenAmount) {
+      const requiredUsdtForInvoiceTokens = quoteForInvoiceTokens[0];
+      if (requiredUsdtForInvoiceTokens > invoiceUsdtAmount) {
         throw new Error(
-          'Invoice can no longer be paid at current tier price. Ask admin to reissue this invoice.',
+          'Invoice can no longer be paid at current tier price (invoice amount exceeded). Ask admin to reissue this invoice.',
         );
       }
 
