@@ -5,15 +5,20 @@ import { useWallet } from '../context/WalletContext';
 import { getInvoiceById, saveInvoice, checkExpiredInvoices, Invoice } from '../utils/invoiceStorage';
 import { useIdoContract } from '../hooks/useContract';
 import { toast } from 'sonner';
-import { useBalance } from 'wagmi';
+import { useAccount, useBalance } from 'wagmi';
 
 type TransactionState = 'idle' | 'approving' | 'pending' | 'success' | 'failed';
 
 export function InvoicePaymentPage() {
   const { invoiceId } = useParams();
   const { address, balance, isConnecting, connect, disconnect } = useWallet();
+  const { chainId } = useAccount();
   const { stats, approveUsdt, payInvoice, getOnChainInvoice, getInvoicePaymentTxHash } = useIdoContract();
-  const { data: nativeBalanceData } = useBalance({ address: (address as `0x${string}` | undefined) });
+  const { data: nativeBalanceData } = useBalance({
+    address: (address as `0x${string}` | undefined),
+    chainId: 1,
+    query: { enabled: Boolean(address), refetchInterval: 5000 },
+  });
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [transactionState, setTransactionState] = useState<TransactionState>('idle');
   const [transactionHash, setTransactionHash] = useState('');
@@ -26,6 +31,7 @@ export function InvoicePaymentPage() {
   const rawEthBalance = nativeBalanceData ? Number(nativeBalanceData.formatted) : 0;
   const ethBalance = Number.isFinite(rawEthBalance) ? rawEthBalance : 0;
   const hasGasBalance = ethBalance > 0;
+  const isWrongNetwork = Boolean(address) && chainId !== 1;
   const locale = typeof navigator !== 'undefined' ? navigator.language : 'en';
   const regionCode = locale.includes('-') ? locale.split('-')[1].toUpperCase() : '';
   const timeZone =
@@ -232,6 +238,10 @@ export function InvoicePaymentPage() {
 
   const handleApprove = async () => {
     if (!invoice || !address) return;
+    if (isWrongNetwork) {
+      toast.error('Switch wallet network to Ethereum Mainnet before approving USDT.');
+      return;
+    }
     if (!hasGasBalance) {
       toast.error('Insufficient ETH for gas. Add a small ETH balance before approving USDT.');
       return;
@@ -252,6 +262,10 @@ export function InvoicePaymentPage() {
 
   const handlePay = async () => {
     if (!invoice || !address) return;
+    if (isWrongNetwork) {
+      toast.error('Switch wallet network to Ethereum Mainnet before paying.');
+      return;
+    }
     if (!hasGasBalance) {
       toast.error('Insufficient ETH for gas. Add a small ETH balance before paying.');
       return;
@@ -535,6 +549,14 @@ export function InvoicePaymentPage() {
                 </div>
               )}
 
+              {isWrongNetwork && (
+                <div className="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30">
+                  <p className="text-sm text-yellow-200">
+                    Wrong network detected. Switch your wallet to Ethereum Mainnet to continue.
+                  </p>
+                </div>
+              )}
+
               {displayUsdtBalance < invoice.amount && (
                 <div className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/30">
                   {invoice.amount >= transakOtcThreshold && (
@@ -647,7 +669,7 @@ export function InvoicePaymentPage() {
                   <button
                     type="button"
                     onClick={() => void handleApprove()}
-                    disabled={transactionState !== 'idle'}
+                    disabled={transactionState !== 'idle' || isWrongNetwork}
                     className="w-full py-4 rounded-xl bg-white/10 border border-white/20 text-white font-semibold hover:bg-white/15 transition-all"
                   >
                     1. Approve USDT
@@ -655,7 +677,12 @@ export function InvoicePaymentPage() {
                   <button
                     type="button"
                     onClick={() => void handlePay()}
-                    disabled={transactionState !== 'idle' || displayUsdtBalance < invoice.amount || needsApproval}
+                    disabled={
+                      transactionState !== 'idle' ||
+                      isWrongNetwork ||
+                      displayUsdtBalance < invoice.amount ||
+                      needsApproval
+                    }
                     className="w-full py-4 rounded-xl bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] text-white font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ boxShadow: '0 0 30px rgba(108, 92, 231, 0.3)' }}
                   >
