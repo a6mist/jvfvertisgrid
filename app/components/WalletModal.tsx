@@ -9,6 +9,8 @@ interface WalletModalProps {
   onClose: () => void;
 }
 
+const PREFERRED_CONNECTOR_STORAGE_KEY = 'wlg_preferred_connector_id';
+
 const walletInfo = {
   metamask: {
     name: 'MetaMask',
@@ -90,6 +92,9 @@ export const WalletModal = ({ isOpen, onClose }: WalletModalProps) => {
     setActiveConnectorKey(mapped.key);
     try {
       await connectAsync({ connector: mapped.connector });
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(PREFERRED_CONNECTOR_STORAGE_KEY, mapped.connector.id);
+      }
       toast.success('Wallet connected successfully!');
       onClose();
     } catch (error) {

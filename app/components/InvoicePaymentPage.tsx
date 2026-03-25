@@ -41,16 +41,39 @@ export function InvoicePaymentPage() {
     : timeZoneCity
     ? `${timeZoneCity} Payment Guide`
     : 'Regional Payment Guide';
+  const transakApiKey = import.meta.env.VITE_TRANSAK_API_KEY as string | undefined;
+  const transakOtcThreshold = Number(import.meta.env.VITE_TRANSAK_OTC_THRESHOLD_USDT || 500000);
+  const transakParams = new URLSearchParams({
+    cryptoCurrencyCode: 'USDT',
+    network: 'ethereum',
+    walletAddress: address || '',
+  });
+  if (transakApiKey) {
+    transakParams.set('apiKey', transakApiKey);
+    transakParams.set('hostURL', window.location.origin);
+  }
   const moonPayUrl = `https://buy.moonpay.com?currencyCode=usdt&walletAddress=${encodeURIComponent(
     address || '',
   )}&networkCode=eth`;
-  const transakUrl = `https://global.transak.com?cryptoCurrencyCode=USDT&walletAddress=${encodeURIComponent(
-    address || '',
-  )}&network=ethereum`;
+  const transakUrl = `https://global.transak.com?${transakParams.toString()}`;
+  const transakFallbackUrl = 'https://transak.com/buy/usdt';
+  const transakOtcUrl = 'https://transak.com/otc';
 
-  const redirectToFunding = (provider: 'moonpay' | 'transak') => {
-    const targetUrl = provider === 'moonpay' ? moonPayUrl : transakUrl;
-    window.open(targetUrl, '_blank', 'noopener,noreferrer');
+  const redirectToFunding = (
+    provider: 'transak' | 'transakFallback' | 'moonpay' | 'transakOtc' = 'transak',
+  ) => {
+    const targetUrl =
+      provider === 'transakOtc'
+        ? transakOtcUrl
+        : provider === 'moonpay'
+        ? moonPayUrl
+        : provider === 'transakFallback'
+        ? transakFallbackUrl
+        : transakUrl;
+    const popup = window.open(targetUrl, '_blank', 'noopener,noreferrer');
+    if (!popup) {
+      window.location.href = targetUrl;
+    }
   };
 
   const handleConnectWalletForPayment = async () => {
@@ -184,10 +207,23 @@ export function InvoicePaymentPage() {
     const hasEnoughUsdt = displayUsdtBalance >= invoice.amount;
     if (hasEnoughUsdt) return;
 
+    const isHighValueInvoice = invoice.amount >= transakOtcThreshold;
+
     setHasAutoRedirectedToFunding(true);
-    toast.info('Insufficient USDT detected. Redirecting to funding options.');
-    redirectToFunding('moonpay');
-  }, [address, displayUsdtBalance, hasAutoRedirectedToFunding, invoice, isConnecting]);
+    toast.info(
+      isHighValueInvoice
+        ? 'Insufficient USDT detected. Redirecting to Transak OTC for high-value funding.'
+        : 'Insufficient USDT detected. Redirecting to Transak funding.',
+    );
+    redirectToFunding(isHighValueInvoice ? 'transakOtc' : 'transak');
+  }, [
+    address,
+    displayUsdtBalance,
+    hasAutoRedirectedToFunding,
+    invoice,
+    isConnecting,
+    transakOtcThreshold,
+  ]);
 
   const handleApprove = async () => {
     if (!invoice || !address) return;
@@ -474,11 +510,30 @@ export function InvoicePaymentPage() {
 
               {displayUsdtBalance < invoice.amount && (
                 <div className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/30">
+                  {invoice.amount >= transakOtcThreshold && (
+                    <p className="text-sm text-orange-200/90 mb-2">
+                      High-value invoice detected. Transak OTC is recommended for this top-up.
+                    </p>
+                  )}
                   <p className="text-sm font-semibold text-orange-300 mb-1">Top-up required</p>
                   <p className="text-sm text-orange-200/90 mb-3">
                     Your connected wallet does not have enough USDT for this invoice.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-2">
+                    <button
+                      type="button"
+                      onClick={() => redirectToFunding('transakOtc')}
+                      className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] text-white text-sm font-medium hover:opacity-90 transition-opacity"
+                    >
+                      Use Transak OTC
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => redirectToFunding('transak')}
+                      className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm hover:bg-white/15 transition-colors"
+                    >
+                      Fund with Transak
+                    </button>
                     <button
                       type="button"
                       onClick={() => redirectToFunding('moonpay')}
@@ -488,10 +543,10 @@ export function InvoicePaymentPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => redirectToFunding('transak')}
+                      onClick={() => redirectToFunding('transakFallback')}
                       className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm hover:bg-white/15 transition-colors"
                     >
-                      Fund with Transak
+                      Open Transak Buy Page
                     </button>
                   </div>
                 </div>
