@@ -26,6 +26,8 @@ export function InvoicePaymentPage() {
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [isLoadingInvoice, setIsLoadingInvoice] = useState(true);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const [isTopUpOpen, setIsTopUpOpen] = useState(false);
   const [transakAmount, setTransakAmount] = useState('100');
   const displayUsdtBalance = Number(stats.usdtBalance || 0);
   const rawEthBalance = nativeBalanceData ? Number(nativeBalanceData.formatted) : 0;
@@ -472,10 +474,25 @@ export function InvoicePaymentPage() {
 
           {invoice.status === 'pending' && (
             <div className="mb-6 p-4 rounded-xl bg-blue-500/10 border border-blue-500/30">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-blue-300 mt-0.5" />
-                <div className="text-sm text-blue-100/90 space-y-2">
-                  <p className="font-semibold text-blue-200">{guidanceTitle}</p>
+              <button
+                type="button"
+                onClick={() => setIsGuideOpen((prev) => !prev)}
+                className="w-full flex items-center justify-between gap-3 text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="w-5 h-5 text-blue-300" />
+                  <div>
+                    <p className="text-sm font-semibold text-blue-200">{guidanceTitle}</p>
+                    <p className="text-xs text-blue-100/70">Click to view full payment guidance</p>
+                  </div>
+                </div>
+                <ChevronDown
+                  className={`w-4 h-4 text-blue-200 transition-transform ${isGuideOpen ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              {isGuideOpen && (
+                <div className="mt-3 pl-8 text-sm text-blue-100/90 space-y-2">
                   <p>
                     Fund your wallet first using your preferred provider available in your
                     region, then return to complete this invoice.
@@ -487,7 +504,7 @@ export function InvoicePaymentPage() {
                   </ul>
                   <p className="text-blue-100/70">Bank/card on-ramp availability depends on provider, country support, and account verification.</p>
                 </div>
-              </div>
+              )}
             </div>
           )}
 
@@ -559,107 +576,123 @@ export function InvoicePaymentPage() {
 
               {displayUsdtBalance < invoice.amount && (
                 <div className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/30">
-                  {invoice.amount >= transakOtcThreshold && (
-                    <p className="text-sm text-orange-200/90 mb-2">
-                      High-value invoice detected. Transak OTC is recommended for this top-up.
-                    </p>
-                  )}
-                  <p className="text-sm font-semibold text-orange-300 mb-1">Top-up required</p>
-                  <p className="text-sm text-orange-200/90 mb-3">
-                    Your connected wallet does not have enough USDT for this invoice.
-                  </p>
-                  <div className="mb-4 max-w-md mx-auto rounded-3xl bg-[#05070B] border border-white/10 p-4 sm:p-5 shadow-[0_16px_40px_rgba(0,0,0,0.5)]">
-                    <div className="flex items-center justify-between mb-5">
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-white"
-                      >
-                        USD
-                        <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
-                      </button>
-                      <div className="flex items-center gap-2 text-white">
-                        <span className="text-sm font-semibold">Buy USDT</span>
-                      </div>
-                      <button
-                        type="button"
-                        className="p-2 rounded-full bg-white/5 border border-white/10 text-gray-300"
-                        aria-label="Transak settings"
-                      >
-                        <Settings className="w-4 h-4" />
-                      </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsTopUpOpen((prev) => !prev)}
+                    className="w-full flex items-center justify-between gap-3 text-left"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-orange-300">Top-up required</p>
+                      <p className="text-sm text-orange-200/90">
+                        Your connected wallet does not have enough USDT for this invoice.
+                      </p>
+                      {invoice.amount >= transakOtcThreshold && (
+                        <p className="text-xs text-orange-200/90 mt-1">
+                          High-value invoice detected. Transak OTC is recommended for this top-up.
+                        </p>
+                      )}
                     </div>
+                    <ChevronDown
+                      className={`w-4 h-4 text-orange-200 transition-transform ${isTopUpOpen ? 'rotate-180' : ''}`}
+                    />
+                  </button>
 
-                    <div className="text-center mb-4">
-                      <div className="relative inline-flex items-center">
-                        <span className="text-3xl sm:text-4xl font-semibold text-gray-500 mr-1">$</span>
-                        <input
-                          type="number"
-                          min="1"
-                          step="1"
-                          value={transakAmount}
-                          onChange={(event) => setTransakAmount(event.target.value)}
-                          className="w-36 sm:w-44 bg-transparent text-center text-4xl sm:text-5xl font-bold text-white tracking-tight focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
-                      </div>
-                      <div className="mt-2 inline-flex items-center gap-1.5 text-xs text-gray-400">
-                        <RefreshCw className="w-3 h-3" />
-                        <span>{estimatedUsdtAfterFees.toFixed(2)} USDT</span>
-                      </div>
-                    </div>
+                  {isTopUpOpen && (
+                    <div className="mt-4">
+                      <div className="mb-4 max-w-md mx-auto rounded-3xl bg-[#05070B] border border-white/10 p-4 sm:p-5 shadow-[0_16px_40px_rgba(0,0,0,0.5)]">
+                        <div className="flex items-center justify-between mb-5">
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-white"
+                          >
+                            USD
+                            <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+                          </button>
+                          <div className="flex items-center gap-2 text-white">
+                            <span className="text-sm font-semibold">Buy USDT</span>
+                          </div>
+                          <button
+                            type="button"
+                            className="p-2 rounded-full bg-white/5 border border-white/10 text-gray-300"
+                            aria-label="Transak settings"
+                          >
+                            <Settings className="w-4 h-4" />
+                          </button>
+                        </div>
 
-                    <div className="grid grid-cols-4 gap-2 mb-4">
-                      {[100, 250, 500, 1000].map((amountOption) => (
+                        <div className="text-center mb-4">
+                          <div className="relative inline-flex items-center">
+                            <span className="text-3xl sm:text-4xl font-semibold text-gray-500 mr-1">$</span>
+                            <input
+                              type="number"
+                              min="1"
+                              step="1"
+                              value={transakAmount}
+                              onChange={(event) => setTransakAmount(event.target.value)}
+                              className="w-36 sm:w-44 bg-transparent text-center text-4xl sm:text-5xl font-bold text-white tracking-tight focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+                          </div>
+                          <div className="mt-2 inline-flex items-center gap-1.5 text-xs text-gray-400">
+                            <RefreshCw className="w-3 h-3" />
+                            <span>{estimatedUsdtAfterFees.toFixed(2)} USDT</span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-4 gap-2 mb-4">
+                          {[100, 250, 500, 1000].map((amountOption) => (
+                            <button
+                              key={amountOption}
+                              type="button"
+                              onClick={() => setTransakAmount(amountOption.toString())}
+                              className="px-2 py-1.5 rounded-full bg-[#2B2F36] border border-white/10 text-xs font-semibold text-white hover:bg-[#3A3F48] transition-colors"
+                            >
+                              ${amountOption}
+                            </button>
+                          ))}
+                        </div>
+
                         <button
-                          key={amountOption}
                           type="button"
-                          onClick={() => setTransakAmount(amountOption.toString())}
-                          className="px-2 py-1.5 rounded-full bg-[#2B2F36] border border-white/10 text-xs font-semibold text-white hover:bg-[#3A3F48] transition-colors"
+                          onClick={() => redirectToFunding('transak')}
+                          className="w-full py-3 rounded-full bg-gradient-to-r from-[#8A00FF] to-[#6200EA] text-white font-semibold hover:opacity-95 transition-opacity"
                         >
-                          ${amountOption}
+                          Continue with Tether
                         </button>
-                      ))}
+
+                        <p className="text-[11px] text-center text-gray-500 mt-2">Powered by Transak</p>
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <button
+                          type="button"
+                          onClick={() => redirectToFunding('moonpay')}
+                          className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] text-white text-sm font-medium hover:opacity-90 transition-opacity"
+                        >
+                          Fund with MoonPay
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => redirectToFunding('transakOtc')}
+                          className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm hover:bg-white/15 transition-colors"
+                        >
+                          Use Transak OTC
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => redirectToFunding('transak')}
+                          className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm hover:bg-white/15 transition-colors"
+                        >
+                          Fund with Transak
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => redirectToFunding('transakFallback')}
+                          className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm hover:bg-white/15 transition-colors"
+                        >
+                          Open Transak Buy Page
+                        </button>
+                      </div>
                     </div>
-
-                    <button
-                      type="button"
-                      onClick={() => redirectToFunding('transak')}
-                      className="w-full py-3 rounded-full bg-gradient-to-r from-[#8A00FF] to-[#6200EA] text-white font-semibold hover:opacity-95 transition-opacity"
-                    >
-                      Continue with Tether
-                    </button>
-
-                    <p className="text-[11px] text-center text-gray-500 mt-2">Powered by Transak</p>
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <button
-                      type="button"
-                      onClick={() => redirectToFunding('moonpay')}
-                      className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] text-white text-sm font-medium hover:opacity-90 transition-opacity"
-                    >
-                      Fund with MoonPay
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => redirectToFunding('transakOtc')}
-                      className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm hover:bg-white/15 transition-colors"
-                    >
-                      Use Transak OTC
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => redirectToFunding('transak')}
-                      className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm hover:bg-white/15 transition-colors"
-                    >
-                      Fund with Transak
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => redirectToFunding('transakFallback')}
-                      className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm hover:bg-white/15 transition-colors"
-                    >
-                      Open Transak Buy Page
-                    </button>
-                  </div>
+                  )}
                 </div>
               )}
 
