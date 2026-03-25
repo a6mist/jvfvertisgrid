@@ -20,6 +20,33 @@ export function InvoicePaymentPage() {
   const [linkCopied, setLinkCopied] = useState(false);
   const [isLoadingInvoice, setIsLoadingInvoice] = useState(true);
 
+  const copyText = async (text: string) => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch {
+      // Fallback below for Safari/in-app browsers that block Clipboard API.
+    }
+
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      textarea.setSelectionRange(0, text.length);
+      const copiedWithExec = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      return copiedWithExec;
+    } catch {
+      return false;
+    }
+  };
+
   useEffect(() => {
     const loadInvoice = async () => {
       checkExpiredInvoices();
@@ -169,8 +196,13 @@ export function InvoicePaymentPage() {
     );
   }
 
-  const copyToClipboard = (text: string, type: 'hash' | 'link') => {
-    navigator.clipboard.writeText(text);
+  const copyToClipboard = async (text: string, type: 'hash' | 'link') => {
+    const isCopied = await copyText(text);
+    if (!isCopied) {
+      toast.error('Copy is not supported in this browser.');
+      return;
+    }
+
     if (type === 'hash') {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -193,7 +225,7 @@ export function InvoicePaymentPage() {
       expired: XCircle,
     };
     
-    const Icon = icons[status as keyof typeof icons];
+    const Icon = icons[status as keyof typeof icons] || Clock;
     
     return (
       <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-sm ${styles[status as keyof typeof styles]}`}>
@@ -222,22 +254,25 @@ export function InvoicePaymentPage() {
   }
 
   return (
-    <div className="min-h-screen pb-20" style={{ backgroundColor: '#0B0F1A' }}>
+    <div
+      className="min-h-screen pb-20"
+      style={{ backgroundColor: '#0B0F1A', paddingBottom: 'max(5rem, env(safe-area-inset-bottom))' }}
+    >
       {/* Header */}
       <div className="border-b border-white/10 backdrop-blur-xl bg-white/5">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <Link to="/" className="text-3xl font-bold bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] bg-clip-text text-transparent">
+        <div className="container mx-auto px-4 py-4 sm:py-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <Link to="/" className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] bg-clip-text text-transparent">
               wearelegend
             </Link>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-500/10 border border-green-500/30">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-green-500/10 border border-green-500/30">
                 <Shield className="w-4 h-4 text-green-400" />
-                <span className="text-sm text-green-400">Blockchain Verified Payment</span>
+                <span className="text-xs sm:text-sm text-green-400">Blockchain Verified Payment</span>
               </div>
-              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10">
                 <div className="w-2 h-2 rounded-full bg-[#00F5D4] animate-pulse"></div>
-                <span className="text-sm text-gray-400">Ethereum Mainnet</span>
+                <span className="text-xs sm:text-sm text-gray-400">Ethereum Mainnet</span>
               </div>
             </div>
           </div>
@@ -247,28 +282,28 @@ export function InvoicePaymentPage() {
       {/* Security Notice */}
       <div className="border-b border-yellow-500/30 bg-yellow-500/10">
         <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center gap-3 text-sm text-yellow-400">
+          <div className="flex items-start gap-3 text-sm text-yellow-400">
             <AlertTriangle className="w-5 h-5" />
             <div className="flex-1 flex flex-wrap gap-x-6 gap-y-1">
               <span className="flex items-center gap-2">
                 <Lock className="w-4 h-4" />
                 All payments are processed via your wallet
               </span>
-              <span>•</span>
+              <span className="hidden sm:inline">•</span>
               <span>We never ask for private keys or seed phrases</span>
-              <span>•</span>
+              <span className="hidden sm:inline">•</span>
               <span>Always verify this domain before paying</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-12 max-w-2xl">
+      <div className="container mx-auto px-3 sm:px-4 py-8 sm:py-12 max-w-2xl">
         {/* Invoice Card */}
-        <div className="mb-8 p-8 rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl">
-          <div className="flex items-start justify-between mb-6">
+        <div className="mb-8 p-4 sm:p-8 rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-white mb-2">{invoice.id}</h1>
+              <h1 className="text-xl sm:text-3xl font-bold text-white mb-2 break-all">{invoice.id}</h1>
               <p className="text-gray-400">Invoice Payment</p>
             </div>
             {getStatusBadge(invoice.status)}
@@ -306,7 +341,7 @@ export function InvoicePaymentPage() {
           {/* Share Link */}
           <div className="mb-6">
             <button
-              onClick={() => copyToClipboard(window.location.href, 'link')}
+              onClick={() => void copyToClipboard(window.location.href, 'link')}
               className="w-full flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 hover:border-[#6C5CE7]/50 transition-all group"
             >
               <span className="text-sm text-gray-400 truncate mr-2">{window.location.href}</span>
@@ -419,7 +454,7 @@ export function InvoicePaymentPage() {
                     {invoice.transactionHash}
                   </span>
                   <button
-                    onClick={() => copyToClipboard(invoice.transactionHash!, 'hash')}
+                    onClick={() => void copyToClipboard(invoice.transactionHash!, 'hash')}
                     className="p-2 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0"
                   >
                     {copied ? (

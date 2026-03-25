@@ -97,9 +97,12 @@ export function Layout() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0B0F1A]">
+    <div className="min-h-screen bg-[#0B0F1A]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-white/10 backdrop-blur-xl bg-[#0B0F1A]/80">
+      <header
+        className="sticky top-0 z-50 border-b border-white/10 backdrop-blur-xl bg-[#0B0F1A]/80"
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      >
         <div className="flex items-center justify-between px-4 py-4 lg:px-8">
           <div className="flex items-center gap-3">
             <img
@@ -108,7 +111,7 @@ export function Layout() {
               className="w-10 h-10 rounded-xl object-cover"
             />
             <div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] bg-clip-text text-transparent">
+              <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] bg-clip-text text-transparent">
                 wearelegend
               </h1>
               <p className="text-xs text-white/60">IDO Admin Panel</p>
@@ -198,7 +201,7 @@ export function Layout() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8 lg:px-8">
+      <main className="container mx-auto px-4 py-6 sm:py-8 lg:px-8">
         {!hasAdminAccess ? (
           <div
             className={`max-w-2xl mx-auto p-6 rounded-2xl border text-center ${

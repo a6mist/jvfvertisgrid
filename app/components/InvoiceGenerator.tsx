@@ -27,7 +27,7 @@ export function InvoiceGenerator() {
   const [generatedInvoice, setGeneratedInvoice] = useState<Invoice | null>(null);
   const [copied, setCopied] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { createInvoice } = useIdoContract();
+  const { createInvoice, simulateBuy } = useIdoContract();
   const { address, connect, isConnecting } = useWallet();
   const { data: adminWallets = [] } = useReadContract({
     chainId: 1,
@@ -45,16 +45,17 @@ export function InvoiceGenerator() {
     Boolean(normalizedAddress) &&
     adminWallets.some((admin) => admin.toLowerCase() === normalizedAddress);
 
-  const TOKEN_RATE = 100; // 1 USDT = 100 WRL tokens
-
   const handleAmountChange = (value: string) => {
     setAmount(value);
     if (value && !isNaN(Number(value))) {
-      setTokenAmount((Number(value) * TOKEN_RATE).toString());
+      const simulation = simulateBuy(value);
+      setTokenAmount(simulation.tokensReceived);
     } else {
       setTokenAmount('');
     }
   };
+
+  const invoiceSimulation = amount && !isNaN(Number(amount)) ? simulateBuy(amount) : null;
 
   const handleGenerateInvoice = async () => {
     if (!isAllowedWallet) {
@@ -242,7 +243,9 @@ export function InvoiceGenerator() {
                 className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-[#6C5CE7] transition-colors"
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-500">
-                Rate: 1 USDT = {TOKEN_RATE} WRL
+                {invoiceSimulation
+                  ? `Live Buy Price: $${invoiceSimulation.pricePerToken} per WRL`
+                  : 'Live Buy Price'}
               </span>
             </div>
           </div>

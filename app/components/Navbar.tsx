@@ -25,7 +25,10 @@ export const Navbar = () => {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-40 border-b border-white/10 bg-[#0a0a0f]/80 backdrop-blur-xl">
+      <nav
+        className="fixed top-0 left-0 right-0 z-40 border-b border-white/10 bg-[#0a0a0f]/80 backdrop-blur-xl"
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
@@ -35,7 +38,7 @@ export const Navbar = () => {
                 alt="wearelegend"
                 className="w-10 h-10 rounded-xl object-cover"
               />
-              <span className="text-xl font-bold bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] bg-clip-text text-transparent">
+              <span className="text-lg sm:text-xl font-bold bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] bg-clip-text text-transparent">
                 wearelegend
               </span>
             </Link>
@@ -82,7 +85,7 @@ export const Navbar = () => {
 
           {/* Mobile Menu */}
           {isMobileMenuOpen && (
-            <div className="md:hidden py-4 border-t border-white/10">
+            <div className="md:hidden py-4 border-t border-white/10 max-h-[70vh] overflow-y-auto">
               <div className="flex flex-col gap-2">
                 {navLinks.map((link) => (
                   <Link

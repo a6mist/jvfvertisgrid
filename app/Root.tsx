@@ -4,9 +4,9 @@ import { Toaster } from 'sonner';
 
 export const Root = () => {
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
+    <div className="min-h-screen bg-[#0a0a0f] text-white" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <Navbar />
-      <main className="pt-16">
+      <main className="pt-[calc(4rem+env(safe-area-inset-top))]">
         <Outlet />
       </main>
       <Toaster 
