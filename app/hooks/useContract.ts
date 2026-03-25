@@ -461,11 +461,34 @@ export const useIdoContract = () => {
     if (!readClient) throw new Error('Read client not available');
     
     try {
+      const targetAllowance = parseUnits(amount, 6);
+      const currentAllowance = (await readClient.readContract({
+        address: USDT_CONTRACT_ADDRESS,
+        abi: USDT_ABI,
+        functionName: 'allowance',
+        args: [address as Address, IDO_CONTRACT_ADDRESS],
+      })) as bigint;
+
+      // USDT-style tokens can reject non-zero -> non-zero approve updates.
+      if (currentAllowance > 0n && targetAllowance > 0n) {
+        const resetHash = await writeContractAsync({
+          address: USDT_CONTRACT_ADDRESS,
+          abi: USDT_ABI,
+          functionName: 'approve',
+          args: [IDO_CONTRACT_ADDRESS, 0n],
+        });
+
+        const resetReceipt = await readClient.waitForTransactionReceipt({ hash: resetHash });
+        if (resetReceipt.status !== 'success') {
+          throw new Error('USDT allowance reset transaction failed on-chain');
+        }
+      }
+
       const hash = await writeContractAsync({
         address: USDT_CONTRACT_ADDRESS,
         abi: USDT_ABI,
         functionName: 'approve',
-        args: [IDO_CONTRACT_ADDRESS, parseUnits(amount, 6)],
+        args: [IDO_CONTRACT_ADDRESS, targetAllowance],
       });
 
       const receipt = await readClient.waitForTransactionReceipt({ hash });
