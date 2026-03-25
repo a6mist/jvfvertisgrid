@@ -568,7 +568,68 @@ export const useIdoContract = () => {
     if (!readClient) throw new Error('Read client not available');
 
     try {
-      const maxUsdtAllowed = parseUnits(usdtAmount, 6);
+      const onChainInvoice = (await readClient.readContract({
+        address: IDO_CONTRACT_ADDRESS,
+        abi: IDO_ABI,
+        functionName: 'getInvoice',
+        args: [invoiceId],
+      })) as unknown as [
+        boolean,
+        boolean,
+        string,
+        bigint,
+        bigint,
+        bigint,
+        Address,
+        string,
+        Address,
+        bigint,
+        bigint,
+      ];
+
+      const exists = onChainInvoice[0];
+      const isPaid = onChainInvoice[1];
+      const invoiceUsdtAmount = onChainInvoice[3];
+      const invoiceTokenAmount = onChainInvoice[4];
+      const invoiceExpiry = onChainInvoice[5];
+      const recipientWallet = onChainInvoice[6];
+
+      if (!exists) {
+        throw new Error('Invoice not found on-chain.');
+      }
+
+      if (isPaid) {
+        throw new Error('Invoice is already paid.');
+      }
+
+      const nowSeconds = BigInt(Math.floor(Date.now() / 1000));
+      if (nowSeconds > invoiceExpiry) {
+        throw new Error('Invoice is already expired.');
+      }
+
+      if (
+        recipientWallet !== '0x0000000000000000000000000000000000000000' &&
+        recipientWallet.toLowerCase() !== address.toLowerCase()
+      ) {
+        throw new Error('Connected wallet is not authorized to pay this invoice.');
+      }
+
+      const quoteForInvoiceUsdt = (await readClient.readContract({
+        address: IDO_CONTRACT_ADDRESS,
+        abi: IDO_ABI,
+        functionName: 'simulateBuyWithUSDT',
+        args: [invoiceUsdtAmount],
+      })) as unknown as [bigint, bigint, bigint[], bigint[], bigint];
+
+      const purchasableTokensForInvoiceUsdt = quoteForInvoiceUsdt[0];
+      if (purchasableTokensForInvoiceUsdt < invoiceTokenAmount) {
+        throw new Error(
+          'Invoice can no longer be paid at current tier price. Ask admin to reissue this invoice.',
+        );
+      }
+
+      const parsedMaxUsdt = parseUnits(usdtAmount, 6);
+      const maxUsdtAllowed = parsedMaxUsdt < invoiceUsdtAmount ? invoiceUsdtAmount : parsedMaxUsdt;
 
       await readClient.simulateContract({
         address: IDO_CONTRACT_ADDRESS,
@@ -589,7 +650,13 @@ export const useIdoContract = () => {
       return hash;
     } catch (error) {
       console.error('Pay invoice failed:', error);
-      throw new Error(extractErrorMessage(error));
+      const message = extractErrorMessage(error);
+      if (message.toLowerCase().includes('execution reverted')) {
+        throw new Error(
+          'Invoice payment reverted on-chain. Common causes: sale inactive, invoice price mismatch, expired invoice, or wallet not authorized.',
+        );
+      }
+      throw new Error(message);
     }
   };
 
