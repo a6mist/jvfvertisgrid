@@ -19,6 +19,7 @@ export function InvoicePaymentPage() {
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [isLoadingInvoice, setIsLoadingInvoice] = useState(true);
+  const [hasAutoRedirectedToFunding, setHasAutoRedirectedToFunding] = useState(false);
   const displayUsdtBalance = Number(stats.usdtBalance || 0);
   const locale = typeof navigator !== 'undefined' ? navigator.language : 'en';
   const regionCode = locale.includes('-') ? locale.split('-')[1].toUpperCase() : '';
@@ -40,6 +41,26 @@ export function InvoicePaymentPage() {
     : timeZoneCity
     ? `${timeZoneCity} Payment Guide`
     : 'Regional Payment Guide';
+  const moonPayUrl = `https://buy.moonpay.com?currencyCode=usdt&walletAddress=${encodeURIComponent(
+    address || '',
+  )}&networkCode=eth`;
+  const transakUrl = `https://global.transak.com?cryptoCurrencyCode=USDT&walletAddress=${encodeURIComponent(
+    address || '',
+  )}&network=ethereum`;
+
+  const redirectToFunding = (provider: 'moonpay' | 'transak') => {
+    const targetUrl = provider === 'moonpay' ? moonPayUrl : transakUrl;
+    window.open(targetUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleConnectWalletForPayment = async () => {
+    try {
+      await connect();
+    } catch (error) {
+      console.error('Connect wallet failed:', error);
+      toast.error('Failed to connect wallet. Please try again.');
+    }
+  };
 
   const copyText = async (text: string) => {
     try {
@@ -155,6 +176,18 @@ export function InvoicePaymentPage() {
 
     return () => clearInterval(interval);
   }, [invoice]);
+
+  useEffect(() => {
+    if (!invoice || invoice.status !== 'pending' || !address || isConnecting) return;
+    if (hasAutoRedirectedToFunding) return;
+
+    const hasEnoughUsdt = displayUsdtBalance >= invoice.amount;
+    if (hasEnoughUsdt) return;
+
+    setHasAutoRedirectedToFunding(true);
+    toast.info('Insufficient USDT detected. Redirecting to funding options.');
+    redirectToFunding('moonpay');
+  }, [address, displayUsdtBalance, hasAutoRedirectedToFunding, invoice, isConnecting]);
 
   const handleApprove = async () => {
     if (!invoice || !address) return;
@@ -398,7 +431,7 @@ export function InvoicePaymentPage() {
           {/* Wallet Connection */}
           {invoice.status === 'pending' && !address && (
             <button
-              onClick={connect}
+              onClick={handleConnectWalletForPayment}
               disabled={isConnecting}
               className="w-full py-4 rounded-xl bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] text-white font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
               style={{ boxShadow: '0 0 30px rgba(108, 92, 231, 0.3)' }}
@@ -438,6 +471,31 @@ export function InvoicePaymentPage() {
                   <span className="text-lg font-semibold text-white">{displayUsdtBalance.toFixed(2)} USDT</span>
                 </div>
               </div>
+
+              {displayUsdtBalance < invoice.amount && (
+                <div className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/30">
+                  <p className="text-sm font-semibold text-orange-300 mb-1">Top-up required</p>
+                  <p className="text-sm text-orange-200/90 mb-3">
+                    Your connected wallet does not have enough USDT for this invoice.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <button
+                      type="button"
+                      onClick={() => redirectToFunding('moonpay')}
+                      className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm hover:bg-white/15 transition-colors"
+                    >
+                      Fund with MoonPay
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => redirectToFunding('transak')}
+                      className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm hover:bg-white/15 transition-colors"
+                    >
+                      Fund with Transak
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Payment Buttons */}
               {transactionState === 'idle' && (
