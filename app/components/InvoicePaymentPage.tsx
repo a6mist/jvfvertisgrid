@@ -5,6 +5,7 @@ import { useWallet } from '../context/WalletContext';
 import { getInvoiceById, saveInvoice, checkExpiredInvoices, Invoice } from '../utils/invoiceStorage';
 import { useIdoContract } from '../hooks/useContract';
 import { toast } from 'sonner';
+import { useBalance } from 'wagmi';
 
 type TransactionState = 'idle' | 'approving' | 'pending' | 'success' | 'failed';
 
@@ -12,6 +13,7 @@ export function InvoicePaymentPage() {
   const { invoiceId } = useParams();
   const { address, balance, isConnecting, connect, disconnect } = useWallet();
   const { stats, approveUsdt, payInvoice, getOnChainInvoice, getInvoicePaymentTxHash } = useIdoContract();
+  const { data: nativeBalanceData } = useBalance({ address: (address as `0x${string}` | undefined) });
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [transactionState, setTransactionState] = useState<TransactionState>('idle');
   const [transactionHash, setTransactionHash] = useState('');
@@ -20,6 +22,7 @@ export function InvoicePaymentPage() {
   const [linkCopied, setLinkCopied] = useState(false);
   const [isLoadingInvoice, setIsLoadingInvoice] = useState(true);
   const displayUsdtBalance = Number(stats.usdtBalance || 0);
+  const ethBalance = nativeBalanceData ? Number(nativeBalanceData.formatted) : 0;
   const locale = typeof navigator !== 'undefined' ? navigator.language : 'en';
   const regionCode = locale.includes('-') ? locale.split('-')[1].toUpperCase() : '';
   const timeZone =
@@ -201,6 +204,10 @@ export function InvoicePaymentPage() {
 
   const handleApprove = async () => {
     if (!invoice || !address) return;
+    if (ethBalance <= 0) {
+      toast.error('Insufficient ETH for gas. Add a small ETH balance before approving USDT.');
+      return;
+    }
 
     setTransactionState('approving');
     try {
@@ -217,6 +224,10 @@ export function InvoicePaymentPage() {
 
   const handlePay = async () => {
     if (!invoice || !address) return;
+    if (ethBalance <= 0) {
+      toast.error('Insufficient ETH for gas. Add a small ETH balance before paying.');
+      return;
+    }
     
     setTransactionState('pending');
 
@@ -480,7 +491,21 @@ export function InvoicePaymentPage() {
                   <span className="text-sm text-gray-400">USDT Balance</span>
                   <span className="text-lg font-semibold text-white">{displayUsdtBalance.toFixed(2)} USDT</span>
                 </div>
+                <div className="flex justify-between items-center mt-2">
+                  <span className="text-sm text-gray-400">ETH for Gas</span>
+                  <span className={`text-sm font-semibold ${ethBalance > 0 ? 'text-green-300' : 'text-red-300'}`}>
+                    {ethBalance.toFixed(6)} ETH
+                  </span>
+                </div>
               </div>
+
+              {ethBalance <= 0 && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30">
+                  <p className="text-sm text-red-200">
+                    No ETH detected for gas fees. Add a small ETH amount before Approve/Pay.
+                  </p>
+                </div>
+              )}
 
               {displayUsdtBalance < invoice.amount && (
                 <div className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/30">
