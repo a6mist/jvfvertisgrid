@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router';
-import { Shield, ExternalLink, Wallet, Clock, CheckCircle, XCircle, Loader2, Lock, AlertTriangle, Copy, Check } from 'lucide-react';
+import { Shield, ExternalLink, Wallet, Clock, CheckCircle, XCircle, Loader2, Lock, AlertTriangle, Copy, Check, ChevronDown, Settings, RefreshCw } from 'lucide-react';
 import { useWallet } from '../context/WalletContext';
 import { getInvoiceById, saveInvoice, checkExpiredInvoices, Invoice } from '../utils/invoiceStorage';
 import { useIdoContract } from '../hooks/useContract';
@@ -21,6 +21,7 @@ export function InvoicePaymentPage() {
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [isLoadingInvoice, setIsLoadingInvoice] = useState(true);
+  const [transakAmount, setTransakAmount] = useState('100');
   const displayUsdtBalance = Number(stats.usdtBalance || 0);
   const ethBalance = nativeBalanceData ? Number(nativeBalanceData.formatted) : 0;
   const locale = typeof navigator !== 'undefined' ? navigator.language : 'en';
@@ -48,6 +49,8 @@ export function InvoicePaymentPage() {
   const transakParams = new URLSearchParams({
     cryptoCurrencyCode: 'USDT',
     network: 'ethereum',
+    productsAvailed: 'BUY',
+    disableWalletAddressForm: 'true',
     walletAddress: address || '',
   });
   if (transakApiKey) {
@@ -57,9 +60,27 @@ export function InvoicePaymentPage() {
   const moonPayUrl = `https://buy.moonpay.com?currencyCode=usdt&walletAddress=${encodeURIComponent(
     address || '',
   )}&networkCode=eth`;
-  const transakUrl = `https://global.transak.com?${transakParams.toString()}`;
+  const buildTransakUrl = (amount?: string) => {
+    const params = new URLSearchParams(transakParams);
+    const normalizedAmount = Number(amount);
+    if (Number.isFinite(normalizedAmount) && normalizedAmount > 0) {
+      params.set('defaultCryptoAmount', String(Math.floor(normalizedAmount)));
+    }
+    return `https://global.transak.com?${params.toString()}`;
+  };
+
+  const transakUrl = buildTransakUrl(String(Math.floor(normalizedTransakAmount)));
   const transakFallbackUrl = 'https://transak.com/buy/usdt';
   const transakOtcUrl = 'https://transak.com/otc';
+
+  const requiredTopUpAmount = Math.max(invoice ? invoice.amount - displayUsdtBalance : 0, 0);
+  const normalizedTransakAmount = Math.max(Number(transakAmount || 0), 0);
+  const estimatedUsdtAfterFees = normalizedTransakAmount * 0.9367;
+
+  useEffect(() => {
+    if (!address || !invoice || requiredTopUpAmount <= 0) return;
+    setTransakAmount(Math.ceil(requiredTopUpAmount).toString());
+  }, [address, invoice?.id, requiredTopUpAmount]);
 
   const redirectToFunding = (
     provider: 'transak' | 'transakFallback' | 'moonpay' | 'transakOtc' = 'transak',
@@ -518,6 +539,68 @@ export function InvoicePaymentPage() {
                   <p className="text-sm text-orange-200/90 mb-3">
                     Your connected wallet does not have enough USDT for this invoice.
                   </p>
+                  <div className="mb-4 max-w-md mx-auto rounded-3xl bg-[#05070B] border border-white/10 p-4 sm:p-5 shadow-[0_16px_40px_rgba(0,0,0,0.5)]">
+                    <div className="flex items-center justify-between mb-5">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-white"
+                      >
+                        USD
+                        <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+                      </button>
+                      <div className="flex items-center gap-2 text-white">
+                        <span className="text-sm font-semibold">Buy USDT</span>
+                      </div>
+                      <button
+                        type="button"
+                        className="p-2 rounded-full bg-white/5 border border-white/10 text-gray-300"
+                        aria-label="Transak settings"
+                      >
+                        <Settings className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="text-center mb-4">
+                      <div className="relative inline-flex items-center">
+                        <span className="text-3xl sm:text-4xl font-semibold text-gray-500 mr-1">$</span>
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={transakAmount}
+                          onChange={(event) => setTransakAmount(event.target.value)}
+                          className="w-36 sm:w-44 bg-transparent text-center text-4xl sm:text-5xl font-bold text-white tracking-tight focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                      </div>
+                      <div className="mt-2 inline-flex items-center gap-1.5 text-xs text-gray-400">
+                        <RefreshCw className="w-3 h-3" />
+                        <span>{estimatedUsdtAfterFees.toFixed(2)} USDT</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-4 gap-2 mb-4">
+                      {[100, 250, 500, 1000].map((amountOption) => (
+                        <button
+                          key={amountOption}
+                          type="button"
+                          onClick={() => setTransakAmount(amountOption.toString())}
+                          className="px-2 py-1.5 rounded-full bg-[#2B2F36] border border-white/10 text-xs font-semibold text-white hover:bg-[#3A3F48] transition-colors"
+                        >
+                          ${amountOption}
+                        </button>
+                      ))}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => redirectToFunding('transak')}
+                      className="w-full py-3 rounded-full bg-gradient-to-r from-[#8A00FF] to-[#6200EA] text-white font-semibold hover:opacity-95 transition-opacity"
+                    >
+                      Continue with Tether
+                    </button>
+
+                    <p className="text-[11px] text-center text-gray-500 mt-2">Powered by Transak</p>
+                  </div>
                   <div className="flex flex-col sm:flex-row gap-2">
                     <button
                       type="button"
