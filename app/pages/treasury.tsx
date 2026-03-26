@@ -20,6 +20,7 @@ interface WithdrawRequest {
 
 export function Treasury() {
   const {
+    connectedRole,
     stats,
     requests: onChainRequests,
     approvalsByRequest,
@@ -270,7 +271,7 @@ export function Treasury() {
             </div>
 
             {/* Actions */}
-            {request.status === "Pending" && (
+            {request.status !== "Executed" && (
               <div className="flex gap-3">
                 {request.approvals < request.requiredApprovals && (
                   <button
@@ -282,13 +283,21 @@ export function Treasury() {
                   </button>
                 )}
                 {request.approvals >= request.requiredApprovals && (
-                  <button
-                    onClick={() => handleExecute(request.id)}
-                    className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] text-white hover:shadow-[0_0_30px_rgba(108,92,231,0.5)] transition-all flex items-center justify-center gap-2"
-                  >
-                    <Send className="w-4 h-4" />
-                    Execute Withdrawal
-                  </button>
+                  <div className="flex-1 space-y-2">
+                    <button
+                      onClick={() => handleExecute(request.id)}
+                      disabled={connectedRole !== "Owner"}
+                      className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] text-white hover:shadow-[0_0_30px_rgba(108,92,231,0.5)] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Send className="w-4 h-4" />
+                      Execute Withdrawal
+                    </button>
+                    {connectedRole !== "Owner" && (
+                      <p className="text-xs text-yellow-300 text-center">
+                        Owner wallet required to execute transfer after approvals.
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             )}
