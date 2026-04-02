@@ -1,4 +1,5 @@
 import { type Address, isAddress } from 'viem';
+import { isTronMode } from './network';
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as Address;
 
@@ -10,8 +11,17 @@ const getEnvAddress = (
   key: 'VITE_IDO_CONTRACT_ADDRESS' | 'VITE_USDT_CONTRACT_ADDRESS' | 'VITE_TOKEN_CONTRACT_ADDRESS',
 ): Address => {
   const value = import.meta.env[key];
+
+  if (isTronMode && typeof value === 'string' && value.trim().length > 0) {
+    return value as Address;
+  }
+
   if (typeof value === 'string' && isAddress(value)) {
     return value as Address;
+  }
+
+  if (isTronMode) {
+    return ZERO_ADDRESS;
   }
 
   if (key === 'VITE_IDO_CONTRACT_ADDRESS') {

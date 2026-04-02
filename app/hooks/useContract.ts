@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAccount, useReadContract, useWriteContract, usePublicClient } from 'wagmi';
 import { formatUnits, parseUnits, type Address, isAddress, parseAbiItem } from 'viem';
 import {
@@ -6,6 +6,8 @@ import {
   USDT_CONTRACT_ADDRESS,
   isContractsConfigured,
 } from '../config/contracts';
+import { isTronMode } from '../config/network';
+import { useWallet } from '../context/WalletContext';
 
 const READ_CHAIN_ID = 1;
 
@@ -244,7 +246,7 @@ export interface PortfolioActivityItem {
   type: 'purchase' | 'claim';
   amount: string;
   usdtAmount?: string;
-  txHash: `0x${string}`;
+  txHash: string;
   timestamp: number;
 }
 
@@ -255,9 +257,9 @@ export interface OnChainInvoice {
   usdtAmount: string;
   tokenAmount: string;
   expiryDate: number;
-  recipientWallet: Address;
+  recipientWallet: string;
   notes: string;
-  payer: Address;
+  payer: string;
   paidAt: number;
   usdtSpent: string;
 }
@@ -344,19 +346,76 @@ const PAY_INVOICE_LEGACY_ABI = [
   },
 ] as const;
 
+const TRON_ZERO_ADDRESS_BASE58 = 'T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb';
+
+const toBigIntSafe = (value: unknown): bigint => {
+  try {
+    if (typeof value === 'bigint') return value;
+    if (typeof value === 'number') return BigInt(Math.trunc(value));
+    if (typeof value === 'string') return BigInt(value);
+    if (value && typeof (value as { toString?: () => string }).toString === 'function') {
+      return BigInt((value as { toString: () => string }).toString());
+    }
+  } catch {
+    return 0n;
+  }
+
+  return 0n;
+};
+
+const toBoolSafe = (value: unknown): boolean => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') return value === 'true' || value === '1';
+  return Boolean(value);
+};
+
+const normalizeTronAddress = (value: unknown): string => {
+  if (typeof value !== 'string') return '';
+  return value.trim();
+};
+
+const isZeroAddressLike = (value: string): boolean => {
+  const lower = value.toLowerCase();
+  return (
+    !value ||
+    lower === '0x0000000000000000000000000000000000000000' ||
+    value === TRON_ZERO_ADDRESS_BASE58
+  );
+};
+
+const getTronWeb = () => (window as any)?.tronWeb;
+
 export const useIdoContract = () => {
-  const { address, isConnected } = useAccount();
+  const { address: evmAddress } = useAccount();
+  const { address: tronAddress } = useWallet();
+  const address = isTronMode ? tronAddress : evmAddress;
   const { writeContractAsync } = useWriteContract();
   const publicClient = usePublicClient();
   const readClient = usePublicClient({ chainId: READ_CHAIN_ID });
   const account = (address ?? '0x0000000000000000000000000000000000000000') as Address;
+  const [tronStats, setTronStats] = useState<IdoStats>({
+    currentPrice: '0',
+    currentTier: 0,
+    totalSold: '0',
+    totalUsdtCollected: '0',
+    totalParticipants: 0,
+    startPrice: '0',
+    priceIncrement: '0',
+    usdtPerTier: '0',
+    maxTokens: '0',
+    userPurchased: '0',
+    userClaimed: false,
+    usdtBalance: '0',
+    usdtAllowance: '0',
+  });
 
   const { data: currentPriceRaw } = useReadContract({
     chainId: READ_CHAIN_ID,
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ABI,
     functionName: 'getCurrentPrice',
-    query: { enabled: isContractsConfigured },
+    query: { enabled: !isTronMode && isContractsConfigured },
   });
 
   const { data: currentTierRaw } = useReadContract({
@@ -364,7 +423,7 @@ export const useIdoContract = () => {
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ABI,
     functionName: 'currentTier',
-    query: { enabled: isContractsConfigured },
+    query: { enabled: !isTronMode && isContractsConfigured },
   });
 
   const { data: totalSoldRaw } = useReadContract({
@@ -372,7 +431,7 @@ export const useIdoContract = () => {
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ABI,
     functionName: 'totalSold',
-    query: { enabled: isContractsConfigured },
+    query: { enabled: !isTronMode && isContractsConfigured },
   });
 
   const { data: totalUsdtCollectedRaw } = useReadContract({
@@ -380,7 +439,7 @@ export const useIdoContract = () => {
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ABI,
     functionName: 'totalUsdtCollected',
-    query: { enabled: isContractsConfigured },
+    query: { enabled: !isTronMode && isContractsConfigured },
   });
 
   const { data: totalParticipantsRaw } = useReadContract({
@@ -388,7 +447,7 @@ export const useIdoContract = () => {
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ABI,
     functionName: 'totalParticipants',
-    query: { enabled: isContractsConfigured },
+    query: { enabled: !isTronMode && isContractsConfigured },
   });
 
   const { data: startPriceRaw } = useReadContract({
@@ -396,7 +455,7 @@ export const useIdoContract = () => {
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ABI,
     functionName: 'START_PRICE',
-    query: { enabled: isContractsConfigured },
+    query: { enabled: !isTronMode && isContractsConfigured },
   });
 
   const { data: priceIncrementRaw } = useReadContract({
@@ -404,7 +463,7 @@ export const useIdoContract = () => {
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ABI,
     functionName: 'PRICE_INCREMENT',
-    query: { enabled: isContractsConfigured },
+    query: { enabled: !isTronMode && isContractsConfigured },
   });
 
   const { data: usdtPerTierRaw } = useReadContract({
@@ -412,7 +471,7 @@ export const useIdoContract = () => {
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ABI,
     functionName: 'USDT_PER_TIER',
-    query: { enabled: isContractsConfigured },
+    query: { enabled: !isTronMode && isContractsConfigured },
   });
 
   const { data: maxTokensRaw } = useReadContract({
@@ -420,7 +479,7 @@ export const useIdoContract = () => {
     address: IDO_CONTRACT_ADDRESS,
     abi: IDO_ABI,
     functionName: 'MAX_TOKENS',
-    query: { enabled: isContractsConfigured },
+    query: { enabled: !isTronMode && isContractsConfigured },
   });
 
   const { data: userPurchasedRaw } = useReadContract({
@@ -429,7 +488,7 @@ export const useIdoContract = () => {
     abi: IDO_ABI,
     functionName: 'purchased',
     args: [account],
-    query: { enabled: isContractsConfigured && Boolean(address) },
+    query: { enabled: !isTronMode && isContractsConfigured && Boolean(address) },
   });
 
   const { data: userClaimedRaw } = useReadContract({
@@ -438,7 +497,7 @@ export const useIdoContract = () => {
     abi: IDO_ABI,
     functionName: 'claimed',
     args: [account],
-    query: { enabled: isContractsConfigured && Boolean(address) },
+    query: { enabled: !isTronMode && isContractsConfigured && Boolean(address) },
   });
 
   const { data: usdtBalanceRaw } = useReadContract({
@@ -448,7 +507,7 @@ export const useIdoContract = () => {
     functionName: 'balanceOf',
     args: [account],
     query: {
-      enabled: isContractsConfigured && Boolean(address),
+      enabled: !isTronMode && isContractsConfigured && Boolean(address),
       refetchInterval: 5000,
     },
   });
@@ -460,13 +519,100 @@ export const useIdoContract = () => {
     functionName: 'allowance',
     args: [account, IDO_CONTRACT_ADDRESS],
     query: {
-      enabled: isContractsConfigured && Boolean(address),
+      enabled: !isTronMode && isContractsConfigured && Boolean(address),
       refetchInterval: 3000,
     },
   });
 
-  const stats = useMemo<IdoStats>(
-    () => ({
+  useEffect(() => {
+    if (!isTronMode || !isContractsConfigured) return;
+
+    let isMounted = true;
+
+    const loadTronStats = async () => {
+      const tronWeb = getTronWeb();
+      if (!tronWeb) return;
+
+      try {
+        const ido = await tronWeb.contract().at(IDO_CONTRACT_ADDRESS);
+        const usdt = await tronWeb.contract().at(USDT_CONTRACT_ADDRESS);
+
+        const [
+          currentPrice,
+          currentTier,
+          totalSold,
+          totalUsdtCollected,
+          totalParticipants,
+          startPrice,
+          priceIncrement,
+          usdtPerTier,
+          maxTokens,
+        ] = await Promise.all([
+          ido.getCurrentPrice().call(),
+          ido.currentTier().call(),
+          ido.totalSold().call(),
+          ido.totalUsdtCollected().call(),
+          ido.totalParticipants().call(),
+          ido.START_PRICE().call(),
+          ido.PRICE_INCREMENT().call(),
+          ido.USDT_PER_TIER().call(),
+          ido.MAX_TOKENS().call(),
+        ]);
+
+        let userPurchased = 0n;
+        let userClaimed = false;
+        let usdtBalance = 0n;
+        let usdtAllowance = 0n;
+
+        if (address) {
+          const [purchasedRaw, claimedRaw, balanceRaw, allowanceRaw] = await Promise.all([
+            ido.purchased(address).call(),
+            ido.claimed(address).call(),
+            usdt.balanceOf(address).call(),
+            usdt.allowance(address, IDO_CONTRACT_ADDRESS).call(),
+          ]);
+
+          userPurchased = toBigIntSafe(purchasedRaw);
+          userClaimed = toBoolSafe(claimedRaw);
+          usdtBalance = toBigIntSafe(balanceRaw);
+          usdtAllowance = toBigIntSafe(allowanceRaw);
+        }
+
+        if (!isMounted) return;
+
+        setTronStats({
+          currentPrice: formatUnits(toBigIntSafe(currentPrice), 6),
+          currentTier: Number(toBigIntSafe(currentTier)),
+          totalSold: formatUnits(toBigIntSafe(totalSold), 18),
+          totalUsdtCollected: formatUnits(toBigIntSafe(totalUsdtCollected), 6),
+          totalParticipants: Number(toBigIntSafe(totalParticipants)),
+          startPrice: formatUnits(toBigIntSafe(startPrice), 6),
+          priceIncrement: formatUnits(toBigIntSafe(priceIncrement), 6),
+          usdtPerTier: formatUnits(toBigIntSafe(usdtPerTier), 6),
+          maxTokens: formatUnits(toBigIntSafe(maxTokens), 18),
+          userPurchased: formatUnits(userPurchased, 18),
+          userClaimed,
+          usdtBalance: formatUnits(usdtBalance, 6),
+          usdtAllowance: formatUnits(usdtAllowance, 6),
+        });
+      } catch (error) {
+        console.error('Failed to load TRON stats:', error);
+      }
+    };
+
+    void loadTronStats();
+    const timer = window.setInterval(() => void loadTronStats(), 5000);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(timer);
+    };
+  }, [address]);
+
+  const stats = useMemo<IdoStats>(() => {
+    if (isTronMode) return tronStats;
+
+    return {
       currentPrice: currentPriceRaw ? formatUnits(currentPriceRaw, 6) : '0',
       currentTier: Number(currentTierRaw ?? 0n),
       totalSold: totalSoldRaw ? formatUnits(totalSoldRaw, 18) : '0',
@@ -480,28 +626,53 @@ export const useIdoContract = () => {
       userClaimed: Boolean(userClaimedRaw ?? false),
       usdtBalance: usdtBalanceRaw ? formatUnits(usdtBalanceRaw, 6) : '0',
       usdtAllowance: usdtAllowanceRaw ? formatUnits(usdtAllowanceRaw, 6) : '0',
-    }),
-    [
-      currentPriceRaw,
-      currentTierRaw,
-      totalSoldRaw,
-      totalUsdtCollectedRaw,
-      totalParticipantsRaw,
-      startPriceRaw,
-      priceIncrementRaw,
-      usdtPerTierRaw,
-      maxTokensRaw,
-      userPurchasedRaw,
-      userClaimedRaw,
-      usdtBalanceRaw,
-      usdtAllowanceRaw,
-    ],
-  );
+    };
+  }, [
+    tronStats,
+    currentPriceRaw,
+    currentTierRaw,
+    totalSoldRaw,
+    totalUsdtCollectedRaw,
+    totalParticipantsRaw,
+    startPriceRaw,
+    priceIncrementRaw,
+    usdtPerTierRaw,
+    maxTokensRaw,
+    userPurchasedRaw,
+    userClaimedRaw,
+    usdtBalanceRaw,
+    usdtAllowanceRaw,
+  ]);
 
   const approveUsdt = async (amount: string) => {
     if (!address) throw new Error('Wallet not connected');
     if (!isContractsConfigured) throw new Error('Contract addresses are not configured');
-    if (!readClient) throw new Error('Read client not available');
+    if (!isTronMode && !readClient) throw new Error('Read client not available');
+
+    if (isTronMode) {
+      try {
+        const tronWeb = getTronWeb();
+        if (!tronWeb) throw new Error('TronWeb not available. Open TronLink and reconnect.');
+
+        const usdt = await tronWeb.contract().at(USDT_CONTRACT_ADDRESS);
+        const targetAllowance = parseUnits(amount, 6);
+        const currentAllowance = toBigIntSafe(await usdt.allowance(address, IDO_CONTRACT_ADDRESS).call());
+
+        if (currentAllowance >= targetAllowance) {
+          return null;
+        }
+
+        if (currentAllowance > 0n && targetAllowance > 0n) {
+          await usdt.approve(IDO_CONTRACT_ADDRESS, '0').send();
+        }
+
+        const txId = await usdt.approve(IDO_CONTRACT_ADDRESS, targetAllowance.toString()).send();
+        return String(txId);
+      } catch (error) {
+        console.error('TRON approve failed:', error);
+        throw new Error(extractErrorMessage(error));
+      }
+    }
     
     try {
       const targetAllowance = parseUnits(amount, 6);
@@ -552,7 +723,31 @@ export const useIdoContract = () => {
   const buyTokens = async (usdtAmount: string) => {
     if (!address) throw new Error('Wallet not connected');
     if (!isContractsConfigured) throw new Error('Contract addresses are not configured');
-    if (!readClient) throw new Error('Read client not available');
+    if (!isTronMode && !readClient) throw new Error('Read client not available');
+
+    if (isTronMode) {
+      try {
+        const tronWeb = getTronWeb();
+        if (!tronWeb) throw new Error('TronWeb not available. Open TronLink and reconnect.');
+
+        const ido = await tronWeb.contract().at(IDO_CONTRACT_ADDRESS);
+        const usdtAmountInUnits = parseUnits(usdtAmount, 6);
+        const simulation = await ido.simulateBuyWithUSDT(usdtAmountInUnits.toString()).call();
+
+        const desiredTokens = toBigIntSafe(
+          (simulation as any)?.totalTokens ?? (Array.isArray(simulation) ? simulation[0] : simulation),
+        );
+        if (desiredTokens <= 0n) {
+          throw new Error('No tokens can be purchased for this USDT amount');
+        }
+
+        const txId = await ido.buyWithExactUSDT(usdtAmountInUnits.toString()).send();
+        return String(txId);
+      } catch (error) {
+        console.error('TRON buy failed:', error);
+        throw error;
+      }
+    }
     
     try {
       const usdtAmountInUnits = parseUnits(usdtAmount, 6);
@@ -590,6 +785,19 @@ export const useIdoContract = () => {
   const claimTokens = async () => {
     if (!address) throw new Error('Wallet not connected');
     if (!isContractsConfigured) throw new Error('Contract addresses are not configured');
+
+    if (isTronMode) {
+      try {
+        const tronWeb = getTronWeb();
+        if (!tronWeb) throw new Error('TronWeb not available. Open TronLink and reconnect.');
+        const ido = await tronWeb.contract().at(IDO_CONTRACT_ADDRESS);
+        const txId = await ido.claim().send();
+        return String(txId);
+      } catch (error) {
+        console.error('TRON claim failed:', error);
+        throw error;
+      }
+    }
     
     try {
       const hash = await writeContractAsync({
@@ -607,8 +815,77 @@ export const useIdoContract = () => {
   const payInvoice = async (invoiceId: string, usdtAmount: string) => {
     if (!address) throw new Error('Wallet not connected');
     if (!isContractsConfigured) throw new Error('Contract addresses are not configured');
-    if (!publicClient) throw new Error('Public client not available');
-    if (!readClient) throw new Error('Read client not available');
+    if (!isTronMode && !publicClient) throw new Error('Public client not available');
+    if (!isTronMode && !readClient) throw new Error('Read client not available');
+
+    if (isTronMode) {
+      try {
+        const tronWeb = getTronWeb();
+        if (!tronWeb) throw new Error('TronWeb not available. Open TronLink and reconnect.');
+
+        const ido = await tronWeb.contract().at(IDO_CONTRACT_ADDRESS);
+        const usdt = await tronWeb.contract().at(USDT_CONTRACT_ADDRESS);
+
+        const [isBuyPausedRaw, startTimeRaw, endTimeRaw] = await Promise.all([
+          ido.isBuyPaused().call(),
+          ido.startTime().call(),
+          ido.endTime().call(),
+        ]);
+
+        if (toBoolSafe(isBuyPausedRaw)) {
+          throw new Error('Invoice payment is currently paused by admin.');
+        }
+
+        const nowSeconds = BigInt(Math.floor(Date.now() / 1000));
+        const startTime = toBigIntSafe(startTimeRaw);
+        const endTime = toBigIntSafe(endTimeRaw);
+        if (nowSeconds < startTime || nowSeconds > endTime) {
+          throw new Error('Sale is inactive on-chain. Invoice payment is unavailable right now.');
+        }
+
+        const rawInvoice = await ido.getInvoice(invoiceId).call();
+        const exists = toBoolSafe((rawInvoice as any)?.exists ?? rawInvoice?.[0]);
+        const paid = toBoolSafe((rawInvoice as any)?.paid ?? rawInvoice?.[1]);
+        const invoiceUsdtAmount = toBigIntSafe((rawInvoice as any)?.usdtAmount ?? rawInvoice?.[3]);
+        const invoiceTokenAmount = toBigIntSafe((rawInvoice as any)?.tokenAmount ?? rawInvoice?.[4]);
+        const invoiceExpiry = toBigIntSafe((rawInvoice as any)?.expiryDate ?? rawInvoice?.[5]);
+        const recipientWallet = normalizeTronAddress((rawInvoice as any)?.recipientWallet ?? rawInvoice?.[6]);
+
+        if (!exists) throw new Error('Invoice not found on-chain.');
+        if (paid) throw new Error('Invoice is already paid.');
+        if (nowSeconds > invoiceExpiry) throw new Error('Invoice is already expired.');
+
+        if (!isZeroAddressLike(recipientWallet) && recipientWallet.toLowerCase() !== address.toLowerCase()) {
+          throw new Error('Connected wallet is not authorized to pay this invoice.');
+        }
+
+        const quote = await ido.simulateBuy(invoiceTokenAmount.toString()).call();
+        const requiredUsdtForInvoiceTokens = toBigIntSafe((quote as any)?.totalCost ?? quote?.[0]);
+        if (requiredUsdtForInvoiceTokens > invoiceUsdtAmount) {
+          throw new Error(
+            'Invoice can no longer be paid at current tier price (invoice amount exceeded). Ask admin to reissue this invoice.',
+          );
+        }
+
+        const currentAllowance = toBigIntSafe(await usdt.allowance(address, IDO_CONTRACT_ADDRESS).call());
+        const currentUsdtBalance = toBigIntSafe(await usdt.balanceOf(address).call());
+
+        if (currentUsdtBalance < invoiceUsdtAmount) {
+          throw new Error('Insufficient USDT balance for this invoice.');
+        }
+
+        if (currentAllowance < invoiceUsdtAmount) {
+          throw new Error('USDT allowance is lower than invoice amount. Please approve again.');
+        }
+
+        const maxUsdtAllowed = parseUnits(usdtAmount, 6).toString();
+        const txId = await ido.payInvoice(invoiceId, maxUsdtAllowed).send();
+        return String(txId);
+      } catch (error) {
+        console.error('TRON pay invoice failed:', error);
+        throw new Error(extractErrorMessage(error));
+      }
+    }
 
     try {
       const [isBuyPaused, startTime, endTime] = (await Promise.all([
@@ -778,7 +1055,39 @@ export const useIdoContract = () => {
   };
 
   const getOnChainInvoice = async (invoiceId: string): Promise<OnChainInvoice | null> => {
-    if (!isContractsConfigured || !readClient || !invoiceId) return null;
+    if (!isContractsConfigured || !invoiceId) return null;
+
+    if (isTronMode) {
+      try {
+        const tronWeb = getTronWeb();
+        if (!tronWeb) return null;
+
+        const ido = await tronWeb.contract().at(IDO_CONTRACT_ADDRESS);
+        const rawInvoice = await ido.getInvoice(invoiceId).call();
+
+        const exists = toBoolSafe((rawInvoice as any)?.exists ?? rawInvoice?.[0]);
+        if (!exists) return null;
+
+        return {
+          exists,
+          paid: toBoolSafe((rawInvoice as any)?.paid ?? rawInvoice?.[1]),
+          invoiceId: String((rawInvoice as any)?.invoiceId ?? rawInvoice?.[2] ?? invoiceId),
+          usdtAmount: formatUnits(toBigIntSafe((rawInvoice as any)?.usdtAmount ?? rawInvoice?.[3]), 6),
+          tokenAmount: formatUnits(toBigIntSafe((rawInvoice as any)?.tokenAmount ?? rawInvoice?.[4]), 18),
+          expiryDate: Number(toBigIntSafe((rawInvoice as any)?.expiryDate ?? rawInvoice?.[5])),
+          recipientWallet: normalizeTronAddress((rawInvoice as any)?.recipientWallet ?? rawInvoice?.[6]),
+          notes: String((rawInvoice as any)?.notes ?? rawInvoice?.[7] ?? ''),
+          payer: normalizeTronAddress((rawInvoice as any)?.payer ?? rawInvoice?.[8]),
+          paidAt: Number(toBigIntSafe((rawInvoice as any)?.paidAt ?? rawInvoice?.[9])),
+          usdtSpent: formatUnits(toBigIntSafe((rawInvoice as any)?.usdtSpent ?? rawInvoice?.[10]), 6),
+        };
+      } catch (error) {
+        console.error('Failed to read TRON invoice:', error);
+        return null;
+      }
+    }
+
+    if (!readClient) return null;
 
     try {
       const rawInvoice = (await readClient.readContract({
@@ -862,7 +1171,31 @@ export const useIdoContract = () => {
   };
 
   const getInvoicePaymentTxHash = async (invoiceId: string): Promise<string | null> => {
-    if (!isContractsConfigured || !readClient || !invoiceId) return null;
+    if (!isContractsConfigured || !invoiceId) return null;
+
+    if (isTronMode) {
+      try {
+        const tronWeb = getTronWeb();
+        if (!tronWeb) return null;
+        const events = await tronWeb.getEventResult(IDO_CONTRACT_ADDRESS, {
+          eventName: 'InvoicePaid',
+          size: 200,
+        });
+
+        const matching = (events || []).filter((event: any) => {
+          const payload = event?.result || event?.event_result || {};
+          return String(payload?.invoiceId || '') === invoiceId;
+        });
+
+        if (matching.length === 0) return null;
+        return String(matching[matching.length - 1]?.transaction_id || '');
+      } catch (error) {
+        console.error('Failed to read TRON invoice payment logs:', error);
+        return null;
+      }
+    }
+
+    if (!readClient) return null;
 
     try {
       const logs = await readClient.getLogs({
@@ -886,7 +1219,37 @@ export const useIdoContract = () => {
   };
 
   const getCreatedInvoiceIds = async (): Promise<string[]> => {
-    if (!isContractsConfigured || !readClient) return [];
+    if (!isContractsConfigured) return [];
+
+    if (isTronMode) {
+      try {
+        const tronWeb = getTronWeb();
+        if (!tronWeb) return [];
+
+        const events = await tronWeb.getEventResult(IDO_CONTRACT_ADDRESS, {
+          eventName: 'InvoiceCreated',
+          size: 500,
+        });
+
+        const seen = new Set<string>();
+        const invoiceIds: string[] = [];
+
+        for (let index = (events || []).length - 1; index >= 0; index -= 1) {
+          const payload = events[index]?.result || events[index]?.event_result || {};
+          const invoiceId = String(payload?.invoiceId || '');
+          if (!invoiceId || seen.has(invoiceId)) continue;
+          seen.add(invoiceId);
+          invoiceIds.push(invoiceId);
+        }
+
+        return invoiceIds;
+      } catch (error) {
+        console.error('Failed to read TRON invoice creation logs:', error);
+        return [];
+      }
+    }
+
+    if (!readClient) return [];
 
     try {
       const logs = await readClient.getLogs({
@@ -927,11 +1290,11 @@ export const useIdoContract = () => {
   }) => {
     if (!address) throw new Error('Wallet not connected');
     if (!isContractsConfigured) throw new Error('Contract addresses are not configured');
-    if (!publicClient) throw new Error('Public client not available');
-    if (!readClient) throw new Error('Read client not available');
+    if (!isTronMode && !publicClient) throw new Error('Public client not available');
+    if (!isTronMode && !readClient) throw new Error('Read client not available');
 
     const recipient = params.recipientWallet?.trim();
-    if (recipient && !isAddress(recipient)) {
+    if (recipient && !isTronMode && !isAddress(recipient)) {
       throw new Error('Invalid recipient wallet address');
     }
 
@@ -940,7 +1303,41 @@ export const useIdoContract = () => {
       throw new Error('Invalid expiry date');
     }
 
-    const admins = (await readClient.readContract({
+    if (isTronMode) {
+      try {
+        const tronWeb = getTronWeb();
+        if (!tronWeb) throw new Error('TronWeb not available. Open TronLink and reconnect.');
+
+        const ido = await tronWeb.contract().at(IDO_CONTRACT_ADDRESS);
+        const adminsRaw = await ido.getAdmins().call();
+        const admins = (Array.isArray(adminsRaw) ? adminsRaw : [adminsRaw]).map((admin) =>
+          String(admin).toLowerCase(),
+        );
+
+        if (!admins.includes(address.toLowerCase())) {
+          throw new Error('Connected wallet is not an on-chain admin for invoice creation');
+        }
+
+        const recipientWallet = recipient || TRON_ZERO_ADDRESS_BASE58;
+        const txId = await ido
+          .createInvoice(
+            params.invoiceId,
+            parseUnits(params.usdtAmount, 6).toString(),
+            parseUnits(params.tokenAmount, 18).toString(),
+            String(expiryTimestamp),
+            recipientWallet,
+            params.notes || '',
+          )
+          .send();
+
+        return String(txId);
+      } catch (error) {
+        console.error('TRON create invoice failed:', error);
+        throw error;
+      }
+    }
+
+    const admins = (await readClient!.readContract({
       address: IDO_CONTRACT_ADDRESS,
       abi: IDO_ABI,
       functionName: 'getAdmins',
@@ -960,8 +1357,7 @@ export const useIdoContract = () => {
       params.notes || '',
     ] as const;
 
-    // Preflight the tx so users do not get a guaranteed-fail MetaMask request.
-    await readClient.simulateContract({
+    await readClient!.simulateContract({
       address: IDO_CONTRACT_ADDRESS,
       abi: IDO_ABI,
       functionName: 'createInvoice',
@@ -977,7 +1373,7 @@ export const useIdoContract = () => {
         args: createArgs,
       });
 
-      await publicClient.waitForTransactionReceipt({ hash });
+      await publicClient!.waitForTransactionReceipt({ hash });
       return hash;
     } catch (error) {
       console.error('Create invoice failed:', error);
@@ -998,27 +1394,73 @@ export const useIdoContract = () => {
   };
 
   const getUserActivity = async (
-    userAddress?: Address,
+    userAddress?: string,
     limit = 50,
   ): Promise<PortfolioActivityItem[]> => {
-    if (!isContractsConfigured || !readClient) return [];
+    if (!isContractsConfigured) return [];
 
     const target = userAddress ?? address;
     if (!target) return [];
+
+    if (isTronMode) {
+      try {
+        const tronWeb = getTronWeb();
+        if (!tronWeb) return [];
+
+        const [purchaseEvents, claimEvents] = await Promise.all([
+          tronWeb.getEventResult(IDO_CONTRACT_ADDRESS, {
+            eventName: 'TokensPurchased',
+            size: limit,
+          }),
+          tronWeb.getEventResult(IDO_CONTRACT_ADDRESS, {
+            eventName: 'TokensClaimed',
+            size: limit,
+          }),
+        ]);
+
+        const purchases = (purchaseEvents || [])
+          .filter((event: any) => String(event?.result?.buyer || '').toLowerCase() === String(target).toLowerCase())
+          .map((event: any) => ({
+            type: 'purchase' as const,
+            amount: formatUnits(toBigIntSafe(event?.result?.tokenAmount), 18),
+            usdtAmount: formatUnits(toBigIntSafe(event?.result?.usdtSpent), 6),
+            txHash: String(event?.transaction_id || ''),
+            timestamp: Number((event?.block_timestamp || 0) / 1000),
+          }));
+
+        const claims = (claimEvents || [])
+          .filter((event: any) => String(event?.result?.claimer || '').toLowerCase() === String(target).toLowerCase())
+          .map((event: any) => ({
+            type: 'claim' as const,
+            amount: formatUnits(toBigIntSafe(event?.result?.amount), 18),
+            txHash: String(event?.transaction_id || ''),
+            timestamp: Number((event?.block_timestamp || 0) / 1000),
+          }));
+
+        return [...purchases, ...claims]
+          .sort((a, b) => b.timestamp - a.timestamp)
+          .slice(0, limit);
+      } catch (error) {
+        console.error('Failed to load TRON user activity:', error);
+        return [];
+      }
+    }
+
+    if (!readClient) return [];
 
     try {
       const [purchaseLogs, claimLogs] = await Promise.all([
         readClient.getLogs({
           address: IDO_CONTRACT_ADDRESS,
           event: TOKENS_PURCHASED_EVENT,
-          args: { buyer: target },
+          args: { buyer: target as Address },
           fromBlock: 0n,
           toBlock: 'latest',
         }),
         readClient.getLogs({
           address: IDO_CONTRACT_ADDRESS,
           event: TOKENS_CLAIMED_EVENT,
-          args: { claimer: target },
+          args: { claimer: target as Address },
           fromBlock: 0n,
           toBlock: 'latest',
         }),
