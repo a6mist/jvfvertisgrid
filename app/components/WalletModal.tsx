@@ -3,6 +3,8 @@ import { useConnect, useAccount, useDisconnect } from 'wagmi';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { Wallet, Copy, LogOut, Check, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
+import { isTronMode } from '../config/network';
+import { useWallet } from '../context/WalletContext';
 
 interface WalletModalProps {
   isOpen: boolean;
@@ -66,8 +68,18 @@ export const WalletModal = ({ isOpen, onClose }: WalletModalProps) => {
   const { connectors, connectAsync, isPending } = useConnect();
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
+  const {
+    address: tronAddress,
+    isConnecting: isTronConnecting,
+    connect: connectTronWallet,
+    disconnect: disconnectTronWallet,
+  } = useWallet();
   const [copied, setCopied] = useState(false);
   const [activeConnectorKey, setActiveConnectorKey] = useState<string | null>(null);
+
+  const resolvedAddress = isTronMode ? tronAddress : address;
+  const resolvedConnected = isTronMode ? Boolean(tronAddress) : isConnected;
+  const resolvedPending = isTronMode ? isTronConnecting : isPending;
 
   const uniqueConnectors = useMemo<MappedConnector[]>(() => {
     const seen = new Set<string>();
@@ -106,9 +118,20 @@ export const WalletModal = ({ isOpen, onClose }: WalletModalProps) => {
     }
   };
 
+  const handleConnectTron = async () => {
+    try {
+      await connectTronWallet();
+      toast.success('TronLink connected successfully!');
+      onClose();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to connect TronLink';
+      toast.error(message);
+    }
+  };
+
   const handleCopy = () => {
-    if (address) {
-      navigator.clipboard.writeText(address);
+    if (resolvedAddress) {
+      navigator.clipboard.writeText(resolvedAddress);
       setCopied(true);
       toast.success('Address copied to clipboard');
       setTimeout(() => setCopied(false), 2000);
@@ -116,7 +139,11 @@ export const WalletModal = ({ isOpen, onClose }: WalletModalProps) => {
   };
 
   const handleDisconnect = () => {
-    disconnect();
+    if (isTronMode) {
+      disconnectTronWallet();
+    } else {
+      disconnect();
+    }
     toast.info('Wallet disconnected');
     onClose();
   };
@@ -130,22 +157,22 @@ export const WalletModal = ({ isOpen, onClose }: WalletModalProps) => {
       <DialogContent className="sm:max-w-md bg-[#0a0a0f]/95 backdrop-blur-xl border-[#6C5CE7]/30">
         <DialogHeader>
           <DialogTitle className="text-2xl bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] bg-clip-text text-transparent">
-            {isConnected ? 'Connected Wallet' : 'Connect Wallet'}
+            {resolvedConnected ? 'Connected Wallet' : 'Connect Wallet'}
           </DialogTitle>
           <DialogDescription className="sr-only">
-            {isConnected
+            {resolvedConnected
               ? 'View your connected wallet address and disconnect if needed.'
               : 'Choose a wallet provider to connect securely.'}
           </DialogDescription>
         </DialogHeader>
 
-        {isConnected ? (
+        {resolvedConnected ? (
           <div className="space-y-4">
             <div className="p-4 rounded-xl bg-gradient-to-r from-[#6C5CE7]/10 to-[#00F5D4]/10 border border-[#6C5CE7]/30">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-400 mb-1">Your Address</p>
-                  <p className="text-lg font-mono text-white">{formatAddress(address!)}</p>
+                  <p className="text-lg font-mono text-white">{formatAddress(resolvedAddress!)}</p>
                 </div>
                 <button
                   onClick={handleCopy}
@@ -198,30 +225,49 @@ export const WalletModal = ({ isOpen, onClose }: WalletModalProps) => {
               </div>
             </div>
 
-            {uniqueConnectors.map((item) => {
-              const isThisConnectorPending = isPending && activeConnectorKey === item.key;
-              return (
-                <button
-                  key={item.key}
-                  onClick={() => void handleConnect(item)}
-                  disabled={isPending}
-                  className="w-full p-4 rounded-xl bg-gradient-to-r from-[#6C5CE7]/10 to-[#00F5D4]/10 border border-[#6C5CE7]/30 hover:border-[#6C5CE7]/60 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <div className="flex items-center gap-4">
-                    <span className="text-3xl">{item.info.icon}</span>
-                    <div className="text-left flex-1">
-                      <p className="text-white font-semibold group-hover:text-[#00F5D4] transition-colors">
-                        {isThisConnectorPending ? `Connecting ${item.info.name}...` : item.info.name}
-                      </p>
-                      <p className="text-xs text-gray-400">{item.info.description}</p>
-                    </div>
-                    <Wallet className="w-5 h-5 text-gray-400 group-hover:text-[#6C5CE7] transition-colors" />
+            {isTronMode ? (
+              <button
+                onClick={() => void handleConnectTron()}
+                disabled={resolvedPending}
+                className="w-full p-4 rounded-xl bg-gradient-to-r from-[#6C5CE7]/10 to-[#00F5D4]/10 border border-[#6C5CE7]/30 hover:border-[#6C5CE7]/60 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <div className="flex items-center gap-4">
+                  <span className="text-3xl">🔺</span>
+                  <div className="text-left flex-1">
+                    <p className="text-white font-semibold group-hover:text-[#00F5D4] transition-colors">
+                      {resolvedPending ? 'Connecting TronLink...' : 'TronLink'}
+                    </p>
+                    <p className="text-xs text-gray-400">TRON wallet extension</p>
                   </div>
-                </button>
-              );
-            })}
+                  <Wallet className="w-5 h-5 text-gray-400 group-hover:text-[#6C5CE7] transition-colors" />
+                </div>
+              </button>
+            ) : (
+              uniqueConnectors.map((item) => {
+                const isThisConnectorPending = isPending && activeConnectorKey === item.key;
+                return (
+                  <button
+                    key={item.key}
+                    onClick={() => void handleConnect(item)}
+                    disabled={isPending}
+                    className="w-full p-4 rounded-xl bg-gradient-to-r from-[#6C5CE7]/10 to-[#00F5D4]/10 border border-[#6C5CE7]/30 hover:border-[#6C5CE7]/60 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="flex items-center gap-4">
+                      <span className="text-3xl">{item.info.icon}</span>
+                      <div className="text-left flex-1">
+                        <p className="text-white font-semibold group-hover:text-[#00F5D4] transition-colors">
+                          {isThisConnectorPending ? `Connecting ${item.info.name}...` : item.info.name}
+                        </p>
+                        <p className="text-xs text-gray-400">{item.info.description}</p>
+                      </div>
+                      <Wallet className="w-5 h-5 text-gray-400 group-hover:text-[#6C5CE7] transition-colors" />
+                    </div>
+                  </button>
+                );
+              })
+            )}
 
-            {uniqueConnectors.length === 0 && (
+            {uniqueConnectors.length === 0 && !isTronMode && (
               <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-sm text-red-200">
                 No wallet connector detected. Install MetaMask extension or use a WalletConnect-compatible wallet.
               </div>

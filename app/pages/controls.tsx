@@ -6,6 +6,7 @@ import { ConfirmModal } from "../components/confirm-modal";
 import { useIdoAdmin } from "../hooks/useIdoAdmin";
 import { useWlgTokenAdmin } from "../hooks/useWlgTokenAdmin";
 import { IDO_CONTRACT_ADDRESS, TOKEN_CONTRACT_ADDRESS } from "../config/contracts";
+import { NETWORK_DISPLAY_NAME } from "../config/network";
 import { useChainId } from "wagmi";
 import { toast } from "sonner";
 
@@ -258,7 +259,7 @@ export function Controls() {
               Some on-chain admin data could not be loaded.
             </p>
             <p className="text-xs text-amber-100/90">
-              This usually means contract address or network mismatch. Verify your Vercel env addresses and connect MetaMask to the deployment network.
+              This usually means contract address or network mismatch. Verify your Vercel env addresses and connect your wallet to {NETWORK_DISPLAY_NAME}.
             </p>
             <div className="text-xs text-amber-100/90 space-y-1 font-mono break-all">
               <p>Connected chain id: {chainId}</p>

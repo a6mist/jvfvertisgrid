@@ -6,6 +6,7 @@ import { getInvoiceById, saveInvoice, checkExpiredInvoices, Invoice } from '../u
 import { useIdoContract } from '../hooks/useContract';
 import { toast } from 'sonner';
 import { useAccount, useBalance } from 'wagmi';
+import { GAS_SYMBOL, isTronMode, NETWORK_DISPLAY_NAME } from '../config/network';
 
 type TransactionState = 'idle' | 'approving' | 'pending' | 'success' | 'failed';
 
@@ -33,10 +34,12 @@ export function InvoicePaymentPage() {
   const [allowPayDuringSync, setAllowPayDuringSync] = useState(false);
   const [transakAmount, setTransakAmount] = useState('100');
   const displayUsdtBalance = Number(stats.usdtBalance || 0);
-  const rawEthBalance = nativeBalanceData ? Number(nativeBalanceData.formatted) : 0;
+  const rawEthBalance = nativeBalanceData
+    ? Number(nativeBalanceData.value) / 10 ** nativeBalanceData.decimals
+    : 0;
   const ethBalance = Number.isFinite(rawEthBalance) ? rawEthBalance : 0;
   const hasGasBalance = ethBalance > 0;
-  const isWrongNetwork = Boolean(address) && chainId !== 1;
+  const isWrongNetwork = !isTronMode && Boolean(address) && chainId !== 1;
   const locale = typeof navigator !== 'undefined' ? navigator.language : 'en';
   const regionCode = locale.includes('-') ? locale.split('-')[1].toUpperCase() : '';
   const timeZone =
@@ -57,8 +60,9 @@ export function InvoicePaymentPage() {
     : timeZoneCity
     ? `${timeZoneCity} Payment Guide`
     : 'Regional Payment Guide';
-  const transakApiKey = import.meta.env.VITE_TRANSAK_API_KEY as string | undefined;
-  const transakOtcThreshold = Number(import.meta.env.VITE_TRANSAK_OTC_THRESHOLD_USDT || 500000);
+  const env = (import.meta as any).env || {};
+  const transakApiKey = env.VITE_TRANSAK_API_KEY as string | undefined;
+  const transakOtcThreshold = Number(env.VITE_TRANSAK_OTC_THRESHOLD_USDT || 500000);
   const transakParams = new URLSearchParams({
     cryptoCurrencyCode: 'USDT',
     network: 'ethereum',
@@ -245,7 +249,7 @@ export function InvoicePaymentPage() {
   const handleApprove = async () => {
     if (!invoice || !address) return;
     if (isWrongNetwork) {
-      toast.error('Switch wallet network to Ethereum Mainnet before approving USDT.');
+      toast.error(`Switch wallet network to ${NETWORK_DISPLAY_NAME} before approving USDT.`);
       return;
     }
     if (!needsApproval) {
@@ -269,7 +273,7 @@ export function InvoicePaymentPage() {
   const handlePay = async () => {
     if (!invoice || !address) return;
     if (isWrongNetwork) {
-      toast.error('Switch wallet network to Ethereum Mainnet before paying.');
+      toast.error(`Switch wallet network to ${NETWORK_DISPLAY_NAME} before paying.`);
       return;
     }
     
@@ -412,7 +416,7 @@ export function InvoicePaymentPage() {
               </div>
               <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10">
                 <div className="w-2 h-2 rounded-full bg-[#00F5D4] animate-pulse"></div>
-                <span className="text-xs sm:text-sm text-gray-400">Ethereum Mainnet</span>
+                <span className="text-xs sm:text-sm text-gray-400">{NETWORK_DISPLAY_NAME}</span>
               </div>
             </div>
           </div>
@@ -519,8 +523,8 @@ export function InvoicePaymentPage() {
                     region, then return to complete this invoice.
                   </p>
                   <ul className="list-disc pl-5 space-y-1 text-blue-100/80">
-                    <li>Use USDT on Ethereum Mainnet.</li>
-                    <li>Keep a small ETH balance for gas fees.</li>
+                    <li>Use USDT on {NETWORK_DISPLAY_NAME}.</li>
+                    <li>Keep a small {GAS_SYMBOL} balance for gas fees.</li>
                     <li>Complete two steps: Approve USDT, then Pay.</li>
                   </ul>
                   <p className="text-blue-100/70">Bank/card on-ramp availability depends on provider, country support, and account verification.</p>
@@ -572,9 +576,9 @@ export function InvoicePaymentPage() {
                   <span className="text-lg font-semibold text-white">{displayUsdtBalance.toFixed(2)} USDT</span>
                 </div>
                 <div className="flex justify-between items-center mt-2">
-                  <span className="text-sm text-gray-400">ETH for Gas</span>
+                  <span className="text-sm text-gray-400">{GAS_SYMBOL} for Gas</span>
                   <span className={`text-sm font-semibold ${hasGasBalance ? 'text-green-300' : 'text-red-300'}`}>
-                    {ethBalance.toFixed(6)} ETH
+                    {ethBalance.toFixed(6)} {GAS_SYMBOL}
                   </span>
                 </div>
               </div>
@@ -582,7 +586,7 @@ export function InvoicePaymentPage() {
               {isWrongNetwork && (
                 <div className="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30">
                   <p className="text-sm text-yellow-200">
-                    Wrong network detected. Switch your wallet to Ethereum Mainnet to continue.
+                    Wrong network detected. Switch your wallet to {NETWORK_DISPLAY_NAME} to continue.
                   </p>
                 </div>
               )}
@@ -621,7 +625,7 @@ export function InvoicePaymentPage() {
                           </p>
                           <ul className="list-disc pl-5 text-xs text-gray-400 space-y-1 mb-4">
                             <li>Request a firm quote from your OTC provider.</li>
-                            <li>Settle USDT to your wallet on Ethereum Mainnet.</li>
+                            <li>Settle USDT to your wallet on {NETWORK_DISPLAY_NAME}.</li>
                             <li>Return here to complete Approve and Pay.</li>
                           </ul>
                           <div className="flex flex-col sm:flex-row gap-2">

@@ -1,7 +1,8 @@
-import { createContext, useContext, ReactNode, useMemo } from 'react';
+import { createContext, useContext, ReactNode, useEffect, useMemo, useState } from 'react';
 import { useAccount, useBalance, useConnect, useDisconnect } from 'wagmi';
 import { formatUnits } from 'viem';
 import { USDT_CONTRACT_ADDRESS, isContractsConfigured } from '../config/contracts';
+import { isTronMode } from '../config/network';
 
 interface WalletContextType {
   address: string | null;
@@ -19,6 +20,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const { address, isConnected } = useAccount();
   const { connectors, connectAsync, isPending } = useConnect();
   const { disconnect } = useDisconnect();
+  const [tronAddress, setTronAddress] = useState<string | null>(null);
+  const [tronBalance, setTronBalance] = useState(0);
+  const [isTronConnecting, setIsTronConnecting] = useState(false);
 
   const isMobileClient =
     typeof navigator !== 'undefined' && /android|iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -79,15 +83,82 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const { data: usdtBalanceData } = useBalance({
     address,
     token: USDT_CONTRACT_ADDRESS,
-    query: { enabled: Boolean(address) && isContractsConfigured },
+    query: { enabled: !isTronMode && Boolean(address) && isContractsConfigured },
   });
 
+  useEffect(() => {
+    if (!isTronMode) return;
+
+    let isMounted = true;
+
+    const syncTronState = async () => {
+      const tronWeb = (window as any)?.tronWeb;
+      const connectedAddress = tronWeb?.defaultAddress?.base58;
+
+      if (!connectedAddress) {
+        if (!isMounted) return;
+        setTronAddress(null);
+        setTronBalance(0);
+        return;
+      }
+
+      if (!isMounted) return;
+      setTronAddress(connectedAddress);
+
+      try {
+        const balanceInSun = await tronWeb.trx.getBalance(connectedAddress);
+        if (!isMounted) return;
+        setTronBalance(Number(balanceInSun || 0) / 1_000_000);
+      } catch {
+        if (!isMounted) return;
+        setTronBalance(0);
+      }
+    };
+
+    void syncTronState();
+    const timer = window.setInterval(() => {
+      void syncTronState();
+    }, 4000);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(timer);
+    };
+  }, []);
+
   const balance = useMemo(() => {
+    if (isTronMode) return tronBalance;
     if (!usdtBalanceData) return 0;
     return Number(formatUnits(usdtBalanceData.value, usdtBalanceData.decimals));
-  }, [usdtBalanceData]);
+  }, [tronBalance, usdtBalanceData]);
 
   const connect = async () => {
+    if (isTronMode) {
+      setIsTronConnecting(true);
+      try {
+        const tronLink = (window as any)?.tronLink;
+        const tronWeb = (window as any)?.tronWeb;
+
+        if (!tronLink && !tronWeb) {
+          throw new Error('TronLink wallet not detected. Install TronLink to continue.');
+        }
+
+        if (tronLink?.request) {
+          await tronLink.request({ method: 'tron_requestAccounts' });
+        }
+
+        const connectedAddress = (window as any)?.tronWeb?.defaultAddress?.base58;
+        if (!connectedAddress) {
+          throw new Error('Unable to read TronLink address. Open TronLink and approve this site.');
+        }
+
+        setTronAddress(connectedAddress);
+        return;
+      } finally {
+        setIsTronConnecting(false);
+      }
+    }
+
     if (isConnected) return;
 
     const primaryConnector = getPreferredConnector();
@@ -125,14 +196,22 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       : new Error('Failed to connect wallet. Please try WalletConnect or MetaMask app browser.');
   };
 
-  const handleDisconnect = () => disconnect();
+  const handleDisconnect = () => {
+    if (isTronMode) {
+      setTronAddress(null);
+      setTronBalance(0);
+      return;
+    }
+
+    disconnect();
+  };
 
   return (
     <WalletContext.Provider
       value={{
-        address: address ?? null,
+        address: isTronMode ? tronAddress : address ?? null,
         balance,
-        isConnecting: isPending,
+        isConnecting: isTronMode ? isTronConnecting : isPending,
         connect,
         disconnect: handleDisconnect,
       }}

@@ -5,10 +5,17 @@ import { useIdoContract } from '../hooks/useContract';
 import { isContractsConfigured } from '../config/contracts';
 import { DollarSign, ArrowRight, AlertCircle, CheckCircle, Loader2, Shield } from 'lucide-react';
 import { toast } from 'sonner';
+import { useWallet } from '../context/WalletContext';
+import { isTronMode } from '../config/network';
 
 export const BuyTokens = () => {
   const { address, isConnected } = useAccount();
   const { connectors, connectAsync, isPending: isConnectingWallet } = useConnect();
+  const {
+    address: tronAddress,
+    connect: connectTronWallet,
+    isConnecting: isTronConnecting,
+  } = useWallet();
   const { stats, approveUsdt, buyTokens, simulateBuy } = useIdoContract();
   const [usdtAmount, setUsdtAmount] = useState('');
   const [isApproving, setIsApproving] = useState(false);
@@ -16,8 +23,9 @@ export const BuyTokens = () => {
   const [txHash, setTxHash] = useState('');
 
   const simulation = usdtAmount ? simulateBuy(usdtAmount) : null;
-  const canUseContracts = isConnected && isContractsConfigured;
-  const blockReason = !isConnected
+  const walletConnected = isTronMode ? Boolean(tronAddress) : isConnected;
+  const canUseContracts = walletConnected && isContractsConfigured;
+  const blockReason = !walletConnected
     ? 'Connect wallet first'
     : !isContractsConfigured
       ? 'Configure contract addresses'
@@ -35,6 +43,17 @@ export const BuyTokens = () => {
   });
 
   const handleQuickConnect = async () => {
+    if (isTronMode) {
+      try {
+        await connectTronWallet();
+        toast.success('TronLink connected successfully!');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to connect TronLink.';
+        toast.error(message);
+      }
+      return;
+    }
+
     const readyConnectors = connectors.filter((connector) => connector.ready ?? true);
     if (readyConnectors.length === 0) {
       toast.error('No wallet connector available.');
@@ -109,7 +128,7 @@ export const BuyTokens = () => {
             <h2 className="text-2xl font-semibold mb-6">Purchase Tokens</h2>
 
             {/* Wallet Connection Warning */}
-            {!isConnected && (
+            {!walletConnected && (
               <div className="mb-6 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/30">
                 <div className="flex gap-3">
                   <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
@@ -118,17 +137,17 @@ export const BuyTokens = () => {
                     <p>Please connect your wallet to participate in the IDO</p>
                     <button
                       onClick={handleQuickConnect}
-                      disabled={isConnectingWallet}
+                      disabled={isConnectingWallet || isTronConnecting}
                       className="mt-3 px-3 py-2 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/40 text-yellow-100 transition-all disabled:opacity-50"
                     >
-                      {isConnectingWallet ? 'Connecting...' : 'Connect Wallet'}
+                      {isConnectingWallet || isTronConnecting ? 'Connecting...' : isTronMode ? 'Connect TronLink' : 'Connect Wallet'}
                     </button>
                   </div>
                 </div>
               </div>
             )}
 
-            {isConnected && !isContractsConfigured && (
+            {walletConnected && !isContractsConfigured && (
               <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30">
                 <div className="flex gap-3">
                   <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
@@ -157,7 +176,7 @@ export const BuyTokens = () => {
                   />
                   <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 </div>
-                {isConnected && isContractsConfigured && (
+                {walletConnected && isContractsConfigured && (
                   <p className="text-sm text-gray-400 mt-1">
                     Balance: {parseFloat(stats.usdtBalance).toLocaleString()} USDT
                   </p>
