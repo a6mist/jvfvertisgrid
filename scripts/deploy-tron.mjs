@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
-import TronWeb from 'tronweb';
+import { TronWeb } from 'tronweb';
 import { compileContracts } from './compile-tron.mjs';
 
 dotenv.config();
@@ -19,6 +19,7 @@ const fullHost = process.env.TRON_FULL_HOST || 'https://api.trongrid.io';
 const privateKey = process.env.TRON_PRIVATE_KEY;
 const usdtAddress = process.env.TRON_USDT_ADDRESS;
 const ownerAddress = process.env.TRON_OWNER_ADDRESS || null;
+const existingTokenAddressRaw = (process.env.TRON_EXISTING_TOKEN_ADDRESS || '').trim();
 const tronApiKey = process.env.TRON_API_KEY || '';
 
 const now = Math.floor(Date.now() / 1000);
@@ -49,23 +50,62 @@ const tronWeb = new TronWeb({
   headers: tronApiKey ? { 'TRON-PRO-API-KEY': tronApiKey } : undefined,
 });
 
+const normalizeTronAddress = (value) => {
+  const input = String(value || '').trim();
+  if (!input) return '';
+  // Accept both Base58 and 41-prefixed hex addresses from env.
+  if (/^41[0-9a-fA-F]{40}$/.test(input)) {
+    return tronWeb.address.fromHex(input);
+  }
+  return input;
+};
+
+const extractDeployTxId = (contractInstance) => {
+  const txId =
+    contractInstance?.transaction?.txID ||
+    contractInstance?.transaction?.txid ||
+    contractInstance?.txID ||
+    contractInstance?.txid ||
+    '';
+  return String(txId || '');
+};
+
 const deploy = async () => {
   const compiled = compileContracts();
 
   const deployer = ownerAddress || tronWeb.address.fromPrivateKey(privateKey);
+  const existingTokenAddress = normalizeTronAddress(existingTokenAddressRaw);
+  const reuseToken = existingTokenAddress.length > 0;
+
   console.log(`Deployer: ${deployer}`);
   console.log(`Network: ${fullHost}`);
+  if (reuseToken) {
+    console.log(`Reusing token: ${existingTokenAddress}`);
+  }
 
-  const token = await tronWeb.contract(compiled.IEFO.abi).new({
-    abi: compiled.IEFO.abi,
-    bytecode: compiled.IEFO.bytecode,
-    feeLimit,
-    callValue: 0,
-    parameters: [deployer],
-  });
+  let token;
+  let tokenAddress;
+  let tokenDeployTx = '';
 
-  const tokenAddress = token.address;
-  console.log(`Token deployed: ${tokenAddress}`);
+  if (reuseToken) {
+    tokenAddress = existingTokenAddress;
+    token = await tronWeb.contract(compiled.IEFO.abi, tokenAddress);
+  } else {
+    token = await tronWeb.contract(compiled.IEFO.abi).new({
+      abi: compiled.IEFO.abi,
+      bytecode: compiled.IEFO.bytecode,
+      feeLimit,
+      callValue: 0,
+      parameters: [deployer],
+    });
+
+    tokenAddress = normalizeTronAddress(token.address);
+    tokenDeployTx = extractDeployTxId(token);
+    console.log(`Token deployed: ${tokenAddress}`);
+    if (tokenDeployTx) {
+      console.log(`Token deploy tx: ${tokenDeployTx}`);
+    }
+  }
 
   const ido = await tronWeb.contract(compiled.IEFO_IDO.abi).new({
     abi: compiled.IEFO_IDO.abi,
@@ -75,8 +115,12 @@ const deploy = async () => {
     parameters: [usdtAddress, tokenAddress, saleStart, saleEnd],
   });
 
-  const idoAddress = ido.address;
+  const idoAddress = normalizeTronAddress(ido.address);
+  const idoDeployTx = extractDeployTxId(ido);
   console.log(`IDO deployed: ${idoAddress}`);
+  if (idoDeployTx) {
+    console.log(`IDO deploy tx: ${idoDeployTx}`);
+  }
 
   const allocation = parseTokenUnits(saleAllocationTokensRaw, 18);
   const transferTx = await token.transfer(idoAddress, allocation.toString()).send({ feeLimit });
@@ -99,8 +143,11 @@ const deploy = async () => {
       saleEnd,
       saleAllocationTokens: saleAllocationTokensRaw,
       feeLimit,
+      reusedToken: reuseToken,
     },
     tx: {
+      tokenDeployment: tokenDeployTx || null,
+      idoDeployment: idoDeployTx || null,
       tokenAllocation: String(transferTx),
     },
   };
