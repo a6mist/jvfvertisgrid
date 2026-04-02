@@ -22,7 +22,7 @@ export function CharityMissionBar({ className = '' }: CharityMissionBarProps) {
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 px-4 py-2 text-xs text-emerald-100 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
         <p className="leading-relaxed">
           <span className="font-semibold text-emerald-300">Charity First:</span>{' '}
-          Bahagi ng kita ng platform ay inilalaan sa community aid, youth programs, at livelihood support.
+          A portion of platform revenue is dedicated to community aid, youth programs, and livelihood support.
         </p>
         <div className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-300/30 bg-emerald-400/10 px-3 py-1 text-[11px] font-semibold tracking-wide text-emerald-200">
           <span>Network Plan:</span>
