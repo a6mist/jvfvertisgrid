@@ -148,7 +148,7 @@ export function AdminLayout() {
                 <span className="text-sm">{isTronMode ? (isTronConnecting ? 'Connecting...' : walletLabel) : isPending ? 'Connecting...' : walletLabel}</span>
               </button>
               <span className="px-4 py-2 rounded-xl bg-[#6C5CE7]/20 text-[#6C5CE7] text-sm font-semibold border border-[#6C5CE7]/30">
-                Admin Panel
+                Charity Operations Admin
               </span>
             </div>
           </div>
@@ -193,6 +193,12 @@ export function AdminLayout() {
               Manage Invoices
             </Link>
           </div>
+        </div>
+      </div>
+
+      <div className="border-b border-emerald-400/20 bg-emerald-500/10">
+        <div className="container mx-auto px-4 py-3 text-sm text-emerald-200">
+          Admin actions on this panel directly support transparent charity treasury operations and invoice governance.
         </div>
       </div>
 

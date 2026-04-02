@@ -318,8 +318,8 @@ export function Logs() {
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl text-white mb-2">Activity Log</h2>
-          <p className="text-white/60">Recent contract events and transactions</p>
+          <h2 className="text-2xl text-white mb-2">Transparency Log</h2>
+          <p className="text-white/60">Recent contract events for fundraising, treasury, and mission governance</p>
         </div>
 
         {/* Filter */}

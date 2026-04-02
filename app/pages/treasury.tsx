@@ -105,7 +105,7 @@ export function Treasury() {
       <div>
         <h2 className="text-2xl text-white mb-2">Treasury Management</h2>
         <p className="text-white/60">
-          Multisig withdrawal system - requires {stats.requiredApprovals} of {stats.signers.length} approvals
+          Mission treasury multisig system - requires {stats.requiredApprovals} of {stats.signers.length} approvals
         </p>
       </div>
 
@@ -118,7 +118,7 @@ export function Treasury() {
             </div>
             <div>
               <h3 className="text-white">Create Withdraw Request</h3>
-              <p className="text-sm text-white/60">Submit a new withdrawal proposal</p>
+              <p className="text-sm text-white/60">Submit a charity treasury disbursement proposal</p>
             </div>
           </div>
 

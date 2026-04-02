@@ -189,7 +189,7 @@ export function InvoiceManagement() {
       <div>
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">Invoice Management</h1>
-          <p className="text-gray-400">Monitor and manage all payment invoices</p>
+          <p className="text-gray-400">Monitor and manage all mission payment invoices with full transparency</p>
         </div>
 
         <div className={`p-4 rounded-xl border ${address ? 'bg-red-500/10 border-red-500/30' : 'bg-white/5 border-white/10'}`}>
@@ -219,7 +219,7 @@ export function InvoiceManagement() {
     <div>
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-white mb-2">Invoice Management</h1>
-        <p className="text-gray-400">Monitor and manage all payment invoices</p>
+        <p className="text-gray-400">Monitor and manage all mission payment invoices with full transparency</p>
       </div>
 
       {/* Stats */}

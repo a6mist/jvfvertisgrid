@@ -272,7 +272,7 @@ export function Controls() {
 
       <div>
         <h2 className="text-2xl text-white mb-2">Sale Control Panel</h2>
-        <p className="text-white/60">Manage sale parameters and administrative access</p>
+        <p className="text-white/60">Manage mission fundraising parameters, access control, and on-chain safeguards</p>
       </div>
 
       {/* Sale Controls */}

@@ -155,7 +155,7 @@ export function Layout() {
               <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] bg-clip-text text-transparent">
                 wearelegend
               </h1>
-              <p className="text-xs text-white/60">IDO Admin Panel</p>
+              <p className="text-xs text-white/60">Charity IDO Command Center</p>
             </div>
           </div>
 
@@ -240,6 +240,10 @@ export function Layout() {
           )}
         </AnimatePresence>
       </header>
+
+      <div className="border-b border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200 lg:px-8">
+        Every configuration update here affects fundraising integrity, treasury safety, and community impact delivery.
+      </div>
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6 sm:py-8 lg:px-8">

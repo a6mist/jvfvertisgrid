@@ -52,11 +52,19 @@ export function Dashboard() {
   };
 
   const progressPercent = stats.maxTokens > 0 ? (stats.totalSold / stats.maxTokens) * 100 : 0;
+  const charityPoolEstimate = stats.totalUSDT * 0.15;
   const networkLabel = chainId ? `Chain ID ${chainId}` : "Unknown network";
   const contractLabel = `${IDO_CONTRACT_ADDRESS.slice(0, 6)}...${IDO_CONTRACT_ADDRESS.slice(-4)}`;
 
   return (
     <div className="space-y-8">
+      <AnimatedSection delay={0.05}>
+        <GlassCard className="border-emerald-400/30 bg-emerald-500/10">
+          <p className="text-sm text-emerald-200">Estimated Charity Allocation (15% of total USDT)</p>
+          <p className="mt-1 text-3xl font-bold text-emerald-300">${charityPoolEstimate.toLocaleString()}</p>
+        </GlassCard>
+      </AnimatedSection>
+
       {/* Access Control */}
       <AnimatedSection delay={0.1}>
         <GlassCard className="flex items-center justify-between">

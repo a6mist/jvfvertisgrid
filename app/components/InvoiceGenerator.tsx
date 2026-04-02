@@ -142,7 +142,7 @@ export function InvoiceGenerator() {
       <div className="max-w-3xl mx-auto">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">Create Invoice</h1>
-          <p className="text-gray-400">Generate a new payment invoice for crypto transactions</p>
+          <p className="text-gray-400">Generate a mission-linked payment invoice for transparent charity operations</p>
         </div>
 
         <div className="p-8 rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl">
@@ -174,7 +174,7 @@ export function InvoiceGenerator() {
     <div className="max-w-3xl mx-auto">
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-white mb-2">Create Invoice</h1>
-        <p className="text-gray-400">Generate a new payment invoice for crypto transactions</p>
+        <p className="text-gray-400">Generate a mission-linked payment invoice for transparent charity operations</p>
       </div>
 
       <div className="p-8 rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl mb-8">
