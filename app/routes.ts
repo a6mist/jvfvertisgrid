@@ -22,6 +22,7 @@ export const router = createBrowserRouter([
     Component: Root,
     children: [
       { index: true, Component: Landing },
+      { path: 'main', Component: Landing },
       { path: 'dashboard', Component: Dashboard },
       { path: 'buy', Component: BuyTokens },
       { path: 'portfolio', Component: Portfolio },

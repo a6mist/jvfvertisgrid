@@ -19,6 +19,7 @@ export const Dashboard = () => {
 
   const totalUsdtCollected = parseNumeric(stats.totalUsdtCollected);
   const totalSold = parseNumeric(stats.totalSold);
+  const charityPoolEstimate = totalUsdtCollected * 0.15;
   const usdtPerTier = parseNumeric(stats.usdtPerTier) || 2_000_000;
   const startPrice = parseNumeric(stats.startPrice) || 0.05;
   const priceIncrement = parseNumeric(stats.priceIncrement) || 0.02;
@@ -114,7 +115,14 @@ export const Dashboard = () => {
             IDO Dashboard
           </span>
         </h1>
-        <p className="text-gray-400">Real-time statistics and analytics</p>
+        <p className="text-gray-400">Real-time IDO statistics, treasury visibility, and charity-impact tracking</p>
+      </div>
+
+      <div className="mb-8 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-5">
+        <p className="text-sm text-emerald-200">Estimated Charity Allocation (15% of USDT raised)</p>
+        <p className="mt-1 text-3xl font-bold text-emerald-300">
+          ${charityPoolEstimate.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+        </p>
       </div>
 
       {/* Stats Grid */}

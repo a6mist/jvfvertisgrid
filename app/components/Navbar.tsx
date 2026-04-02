@@ -15,7 +15,7 @@ export const Navbar = () => {
   };
 
   const navLinks = [
-    { path: '/', label: 'Home' },
+    { path: '/main', label: 'Home' },
     { path: '/dashboard', label: 'Dashboard' },
     { path: '/buy', label: 'Buy Tokens' },
     { path: '/portfolio', label: 'Portfolio' },

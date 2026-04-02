@@ -412,7 +412,7 @@ export function InvoicePaymentPage() {
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
               <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-green-500/10 border border-green-500/30">
                 <Shield className="w-4 h-4 text-green-400" />
-                <span className="text-xs sm:text-sm text-green-400">Blockchain Verified Payment</span>
+                <span className="text-xs sm:text-sm text-green-400">Blockchain Verified Charity Payment</span>
               </div>
               <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10">
                 <div className="w-2 h-2 rounded-full bg-[#00F5D4] animate-pulse"></div>
@@ -443,12 +443,16 @@ export function InvoicePaymentPage() {
       </div>
 
       <div className="container mx-auto px-3 sm:px-4 py-8 sm:py-12 max-w-2xl">
+        <div className="mb-6 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
+          This payment contributes to a mission-led treasury that supports community aid and youth development initiatives.
+        </div>
+
         {/* Invoice Card */}
         <div className="mb-8 p-4 sm:p-8 rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-6">
             <div>
               <h1 className="text-xl sm:text-3xl font-bold text-white mb-2 break-all">{invoice.id}</h1>
-              <p className="text-gray-400">Invoice Payment</p>
+              <p className="text-gray-400">Invoice Payment for Charity-linked IDO Flow</p>
             </div>
             {getStatusBadge(invoice.status)}
           </div>

@@ -115,10 +115,14 @@ export const BuyTokens = () => {
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2">
           <span className="bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] bg-clip-text text-transparent">
-            Buy Tokens
+            Support via IDO
           </span>
         </h1>
-        <p className="text-gray-400">Participate in the IDO and secure your tokens</p>
+        <p className="text-gray-400">Participate in the IDO while helping fund the wearelegend charity mission</p>
+      </div>
+
+      <div className="mb-6 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
+        A dedicated share of platform revenue is routed to community aid, youth programs, and livelihood initiatives.
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

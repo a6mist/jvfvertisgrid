@@ -103,7 +103,7 @@ export const Portfolio = () => {
             My Portfolio
           </span>
         </h1>
-        <p className="text-gray-400">Manage your tokens and track your investments</p>
+        <p className="text-gray-400">Track your token position and your contribution to mission-driven fundraising</p>
       </div>
 
       {/* Overview Cards */}

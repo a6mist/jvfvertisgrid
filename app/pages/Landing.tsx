@@ -7,33 +7,33 @@ export const Landing = () => {
   const features = [
     {
       icon: Shield,
-      title: 'Secure & Trusted',
-      description: 'Multi-wallet support with industry-standard security protocols',
+      title: 'Transparent Giving',
+      description: 'On-chain fundraising and allocation flows make charity impact auditable.',
     },
     {
       icon: Zap,
-      title: 'Instant Trading',
-      description: 'Buy tokens instantly with USDT at competitive prices',
+      title: 'Fast Participation',
+      description: 'Support the mission through instant USDT participation and invoice payments.',
     },
     {
       icon: TrendingUp,
-      title: 'Tiered Pricing',
-      description: 'Early bird advantages with progressive tier pricing',
+      title: 'Tiered IDO Model',
+      description: 'Progressive pricing rewards early contributors while funding long-term impact.',
     },
     {
       icon: Users,
       title: 'Community Driven',
-      description: 'Join thousands of investors in the wearelegend ecosystem',
+      description: 'Every participant helps fund community aid, youth programs, and livelihood support.',
     },
     {
       icon: Lock,
-      title: 'Smart Contracts',
-      description: 'Audited and verified contracts for maximum transparency',
+      title: 'Smart Contract Based',
+      description: 'Contract-enforced rules protect treasury flow, invoice settlement, and claims.',
     },
     {
       icon: Rocket,
-      title: 'Launch Ready',
-      description: 'Get ready for the next big thing in Web3',
+      title: 'Mission at Scale',
+      description: 'A single platform for charity funding, token launch, and transparent reporting.',
     },
   ];
 
@@ -52,11 +52,11 @@ export const Landing = () => {
           >
             <h1 className="text-5xl md:text-7xl font-bold mb-6">
               <span className="bg-gradient-to-r from-[#6C5CE7] via-[#00F5D4] to-[#6C5CE7] bg-clip-text text-transparent">
-                Welcome to wearelegend
+                wearelegend Charity IDO
               </span>
             </h1>
             <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-3xl mx-auto">
-              The Next Generation IDO Launchpad for Web3 Innovation
+              A charity-first launchpad where every on-chain action helps fund real-world social impact.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -64,7 +64,7 @@ export const Landing = () => {
                 to="/buy"
                 className="px-8 py-4 rounded-xl bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] hover:shadow-[0_0_40px_rgba(108,92,231,0.6)] transition-all font-semibold text-lg"
               >
-                Buy Tokens Now
+                Support Through IDO
               </Link>
               <Link
                 to="/dashboard"
@@ -123,9 +123,9 @@ export const Landing = () => {
             className="text-center mb-16"
           >
             <h2 className="text-4xl md:text-5xl font-bold mb-4">
-              Why Choose <span className="bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] bg-clip-text text-transparent">wearelegend</span>?
+              Why Build With <span className="bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] bg-clip-text text-transparent">wearelegend</span>?
             </h2>
-            <p className="text-xl text-gray-400">Built for the future of decentralized finance</p>
+            <p className="text-xl text-gray-400">Built for transparent fundraising, social impact, and sustainable token growth</p>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -157,10 +157,10 @@ export const Landing = () => {
         <div className="max-w-4xl mx-auto">
           <GlassCard glow className="text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Ready to Join the Revolution?
+              Ready to Fund Impact?
             </h2>
             <p className="text-xl text-gray-300 mb-8">
-              Connect your wallet and start participating in the IDO
+              Connect your wallet, join the IDO, and help scale our charity mission.
             </p>
             <Link
               to="/buy"
