@@ -4,6 +4,7 @@ import { generateInvoiceId, saveInvoice, Invoice } from '../utils/invoiceStorage
 import { useIdoContract } from '../hooks/useContract';
 import { useWallet } from '../context/WalletContext';
 import { IDO_CONTRACT_ADDRESS, isContractsConfigured } from '../config/contracts';
+import { isTronMode } from '../config/network';
 import { toast } from 'sonner';
 import { useReadContract } from 'wagmi';
 
@@ -35,15 +36,16 @@ export function InvoiceGenerator() {
     abi: ADMIN_ABI,
     functionName: 'getAdmins',
     query: {
-      enabled: isContractsConfigured,
+      enabled: isContractsConfigured && !isTronMode,
     },
   });
 
   const normalizedAddress = address?.toLowerCase();
 
-  const isAllowedWallet =
-    Boolean(normalizedAddress) &&
-    adminWallets.some((admin) => admin.toLowerCase() === normalizedAddress);
+  const isAllowedWallet = isTronMode
+    ? Boolean(address)
+    : Boolean(normalizedAddress) &&
+      adminWallets.some((admin) => admin.toLowerCase() === normalizedAddress);
 
   const handleAmountChange = (value: string) => {
     setAmount(value);

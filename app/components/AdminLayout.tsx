@@ -3,6 +3,8 @@ import { FileText, LayoutDashboard, Home, Wallet } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { toast } from 'sonner';
+import { isTronMode } from '../config/network';
+import { useWallet } from '../context/WalletContext';
 
 const ALLOWED_IDO_ADMIN_WALLET = '0xEb556534041026eF6f5Fd3223cb2b3Ca7E271ec6';
 const MASKED_ALLOWED_IDO_ADMIN_WALLET = '0xEb556*************************************71ec6';
@@ -14,16 +16,37 @@ export function AdminLayout() {
   const { address, isConnected } = useAccount();
   const { connectors, connectAsync, isPending } = useConnect();
   const { disconnect } = useDisconnect();
+  const {
+    address: tronAddress,
+    isConnecting: isTronConnecting,
+    connect: connectTronWallet,
+    disconnect: disconnectTronWallet,
+  } = useWallet();
   const hasShownUnauthorizedToast = useRef(false);
 
+  const env = (import.meta as any).env || {};
+  const tronAdminWallets = String(env.VITE_TRON_ADMIN_WALLETS || '')
+    .split(',')
+    .map((wallet: string) => wallet.trim().toLowerCase())
+    .filter((wallet: string) => wallet.length > 0);
+
+  const activeAddress = isTronMode ? tronAddress : address;
+  const activeConnected = isTronMode ? Boolean(tronAddress) : isConnected;
+
   const isAllowedWallet =
-    Boolean(address) &&
-    [ALLOWED_IDO_ADMIN_WALLET, ALLOWED_IDO_ADMIN_WALLET_2].some(
-      (wallet) => address.toLowerCase() === wallet.toLowerCase(),
-    );
-  const isUnauthorizedConnected = Boolean(isConnected && address && !isAllowedWallet);
-  const hasAdminAccess = Boolean(isConnected && isAllowedWallet);
-  const walletLabel = isAllowedWallet && address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'Connect Wallet';
+    isTronMode
+      ? Boolean(activeAddress) &&
+        (tronAdminWallets.length === 0 || tronAdminWallets.includes(activeAddress!.toLowerCase()))
+      : Boolean(address) &&
+        [ALLOWED_IDO_ADMIN_WALLET, ALLOWED_IDO_ADMIN_WALLET_2].some(
+          (wallet) => address.toLowerCase() === wallet.toLowerCase(),
+        );
+  const isUnauthorizedConnected = Boolean(activeConnected && activeAddress && !isAllowedWallet);
+  const hasAdminAccess = Boolean(activeConnected && isAllowedWallet);
+  const walletLabel =
+    isAllowedWallet && activeAddress
+      ? `${activeAddress.slice(0, 6)}...${activeAddress.slice(-4)}`
+      : 'Connect Wallet';
 
   useEffect(() => {
     if (isUnauthorizedConnected) {
@@ -39,6 +62,26 @@ export function AdminLayout() {
   }, [disconnect, isUnauthorizedConnected]);
 
   const handleWalletClick = async () => {
+    if (isTronMode) {
+      if (activeConnected) {
+        if (!isAllowedWallet) {
+          disconnectTronWallet();
+          toast.error('Connecting wallet failed');
+          return;
+        }
+
+        disconnectTronWallet();
+        return;
+      }
+
+      try {
+        await connectTronWallet();
+      } catch {
+        toast.error('Connecting wallet failed');
+      }
+      return;
+    }
+
     if (isConnected) {
       if (!isAllowedWallet) {
         disconnect();
@@ -98,11 +141,11 @@ export function AdminLayout() {
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={handleWalletClick}
-                disabled={isPending}
+                disabled={isTronMode ? isTronConnecting : isPending}
                 className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] text-white hover:opacity-90 transition-all disabled:opacity-60 flex items-center gap-2"
               >
                 <Wallet className="w-4 h-4" />
-                <span className="text-sm">{isPending ? 'Connecting...' : walletLabel}</span>
+                <span className="text-sm">{isTronMode ? (isTronConnecting ? 'Connecting...' : walletLabel) : isPending ? 'Connecting...' : walletLabel}</span>
               </button>
               <span className="px-4 py-2 rounded-xl bg-[#6C5CE7]/20 text-[#6C5CE7] text-sm font-semibold border border-[#6C5CE7]/30">
                 Admin Panel

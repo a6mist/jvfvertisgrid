@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { toast } from "sonner";
+import { useWallet } from "../context/WalletContext";
+import { isTronMode } from "../config/network";
 
 const ALLOWED_IDO_ADMIN_WALLET = "0xEb556534041026eF6f5Fd3223cb2b3Ca7E271ec6";
 const MASKED_ALLOWED_IDO_ADMIN_WALLET = "0xEb556*************************************71ec6";
@@ -15,16 +17,35 @@ export function Layout() {
   const { address, isConnected } = useAccount();
   const { connectors, connectAsync, isPending } = useConnect();
   const { disconnect } = useDisconnect();
+  const {
+    address: tronAddress,
+    isConnecting: isTronConnecting,
+    connect: connectTronWallet,
+    disconnect: disconnectTronWallet,
+  } = useWallet();
   const hasShownUnauthorizedToast = useRef(false);
-  const isAllowedWallet =
-    Boolean(address) &&
-    [ALLOWED_IDO_ADMIN_WALLET, ALLOWED_IDO_ADMIN_WALLET_2].some(
-      (wallet) => address.toLowerCase() === wallet.toLowerCase(),
-    );
-  const isUnauthorizedConnected = Boolean(isConnected && address && !isAllowedWallet);
-  const hasAdminAccess = Boolean(isConnected && isAllowedWallet);
 
-  const walletLabel = isAllowedWallet && address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Connect Wallet";
+  const env = (import.meta as any).env || {};
+  const tronAdminWallets = String(env.VITE_TRON_ADMIN_WALLETS || '')
+    .split(',')
+    .map((wallet: string) => wallet.trim().toLowerCase())
+    .filter((wallet: string) => wallet.length > 0);
+
+  const activeAddress = isTronMode ? tronAddress : address;
+  const activeConnected = isTronMode ? Boolean(tronAddress) : isConnected;
+  const isAllowedWallet =
+    isTronMode
+      ? Boolean(activeAddress) &&
+        (tronAdminWallets.length === 0 || tronAdminWallets.includes(activeAddress!.toLowerCase()))
+      : Boolean(address) &&
+        [ALLOWED_IDO_ADMIN_WALLET, ALLOWED_IDO_ADMIN_WALLET_2].some(
+          (wallet) => address.toLowerCase() === wallet.toLowerCase(),
+        );
+  const isUnauthorizedConnected = Boolean(activeConnected && activeAddress && !isAllowedWallet);
+  const hasAdminAccess = Boolean(activeConnected && isAllowedWallet);
+
+  const walletLabel =
+    isAllowedWallet && activeAddress ? `${activeAddress.slice(0, 6)}...${activeAddress.slice(-4)}` : "Connect Wallet";
 
   const getPreferredConnector = () => {
     const readyConnectors = connectors.filter((connector) => connector.ready ?? true);
@@ -52,6 +73,26 @@ export function Layout() {
   }, [disconnect, isUnauthorizedConnected]);
 
   const handleWalletClick = async () => {
+    if (isTronMode) {
+      if (activeConnected) {
+        if (!isAllowedWallet) {
+          disconnectTronWallet();
+          toast.error("Connecting wallet failed");
+          return;
+        }
+
+        disconnectTronWallet();
+        return;
+      }
+
+      try {
+        await connectTronWallet();
+      } catch {
+        toast.error("Connecting wallet failed");
+      }
+      return;
+    }
+
     if (isConnected) {
       if (!isAllowedWallet) {
         disconnect();
@@ -142,11 +183,11 @@ export function Layout() {
           {/* Wallet Connect Button */}
           <button
             onClick={handleWalletClick}
-            disabled={isPending}
+            disabled={isTronMode ? isTronConnecting : isPending}
             className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] text-white hover:shadow-[0_0_30px_rgba(108,92,231,0.5)] transition-all disabled:opacity-60"
           >
             <Wallet className="w-4 h-4" />
-            <span className="hidden lg:inline">{isPending ? "Connecting..." : walletLabel}</span>
+            <span className="hidden lg:inline">{isTronMode ? (isTronConnecting ? "Connecting..." : walletLabel) : isPending ? "Connecting..." : walletLabel}</span>
           </button>
 
           {/* Mobile Menu Button */}
@@ -188,11 +229,11 @@ export function Layout() {
                 ))}
                 <button
                   onClick={handleWalletClick}
-                  disabled={isPending}
+                  disabled={isTronMode ? isTronConnecting : isPending}
                   className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] text-white w-full disabled:opacity-60"
                 >
                   <Wallet className="w-5 h-5" />
-                  <span>{isPending ? "Connecting..." : walletLabel}</span>
+                  <span>{isTronMode ? (isTronConnecting ? "Connecting..." : walletLabel) : isPending ? "Connecting..." : walletLabel}</span>
                 </button>
               </div>
             </motion.nav>
