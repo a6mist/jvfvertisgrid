@@ -4,6 +4,7 @@ import { RouterProvider } from 'react-router';
 import { config } from './config/wagmi';
 import { router } from './routes';
 import { WalletProvider } from './context/WalletContext';
+import { CharityMissionBar } from './components/CharityMissionBar';
 
 const queryClient = new QueryClient();
 
@@ -12,6 +13,7 @@ export default function App() {
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <WalletProvider>
+          <CharityMissionBar />
           <RouterProvider router={router} />
         </WalletProvider>
       </QueryClientProvider>
