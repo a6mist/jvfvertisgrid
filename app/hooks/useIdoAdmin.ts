@@ -125,6 +125,48 @@ const ERC20_DECIMALS_ABI = [
   },
 ] as const;
 
+const extractErrorMessage = (error: unknown): string => {
+  const seen = new Set<unknown>();
+  const queue: unknown[] = [error];
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current || typeof current !== "object" || seen.has(current)) continue;
+    seen.add(current);
+
+    const candidate = current as {
+      shortMessage?: unknown;
+      reason?: unknown;
+      details?: unknown;
+      message?: unknown;
+      cause?: unknown;
+      data?: unknown;
+    };
+
+    for (const key of ["shortMessage", "reason", "details", "message"] as const) {
+      const value = candidate[key];
+      if (typeof value === "string" && value.trim().length > 0) {
+        return value.trim();
+      }
+    }
+
+    if (candidate.cause) queue.push(candidate.cause);
+    if (candidate.data) queue.push(candidate.data);
+  }
+
+  return "Transaction failed. Please check wallet confirmation and network status.";
+};
+
+const isUserRejectedError = (error: unknown): boolean => {
+  const message = extractErrorMessage(error).toLowerCase();
+  return (
+    message.includes("user rejected") ||
+    message.includes("user denied") ||
+    message.includes("denied transaction signature") ||
+    message.includes("rejected the request")
+  );
+};
+
 export const useIdoAdmin = () => {
   const { address } = useAccount();
   const { writeContractAsync } = useWriteContract();
@@ -360,15 +402,27 @@ export const useIdoAdmin = () => {
     if (!address) throw new Error("Wallet not connected");
     if (!isContractsConfigured) throw new Error("Contract address not configured");
 
-    const hash = await writeContractAsync({
-      address: IDO_CONTRACT_ADDRESS,
-      abi: IDO_ADMIN_ABI,
-      functionName,
-      args,
-    } as any);
+    try {
+      const hash = await writeContractAsync({
+        address: IDO_CONTRACT_ADDRESS,
+        abi: IDO_ADMIN_ABI,
+        functionName,
+        args,
+      } as any);
 
-    forceRefresh();
-    return hash;
+      if (publicClient) {
+        await publicClient.waitForTransactionReceipt({ hash });
+      }
+
+      forceRefresh();
+      return hash;
+    } catch (error) {
+      if (isUserRejectedError(error)) {
+        throw new Error("Transaction cancelled in wallet. No on-chain changes were made.");
+      }
+
+      throw new Error(extractErrorMessage(error));
+    }
   };
 
   const stats = useMemo(

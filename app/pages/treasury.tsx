@@ -37,6 +37,8 @@ export function Treasury() {
   const [recipient, setRecipient] = useState("");
   const [purpose, setPurpose] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [approvingRequestId, setApprovingRequestId] = useState<number | null>(null);
+  const [executingRequestId, setExecutingRequestId] = useState<number | null>(null);
 
   const signers = stats.signers.map((address, index) => ({
     address,
@@ -100,21 +102,29 @@ export function Treasury() {
 
   const handleApprove = async (requestId: number) => {
     try {
+      setApprovingRequestId(requestId);
       await approveWithdraw(requestId);
       toast.success("Approval submitted");
     } catch (error) {
       console.error(error);
-      toast.error("Failed to approve request");
+      const message = error instanceof Error ? error.message : "Failed to approve request";
+      toast.error(message);
+    } finally {
+      setApprovingRequestId(null);
     }
   };
 
   const handleExecute = async (requestId: number) => {
     try {
+      setExecutingRequestId(requestId);
       await withdrawToken(requestId);
       toast.success("Withdraw execution submitted");
     } catch (error) {
       console.error(error);
-      toast.error("Failed to execute withdrawal");
+      const message = error instanceof Error ? error.message : "Failed to execute withdrawal";
+      toast.error(message);
+    } finally {
+      setExecutingRequestId(null);
     }
   };
 
@@ -296,20 +306,26 @@ export function Treasury() {
                 {request.approvals < request.requiredApprovals && (
                   <button
                     onClick={() => handleApprove(request.id)}
+                    disabled={approvingRequestId === request.id || executingRequestId === request.id}
                     className="flex-1 px-4 py-3 rounded-xl bg-[#6C5CE7]/20 text-[#6C5CE7] border border-[#6C5CE7]/30 hover:bg-[#6C5CE7]/30 transition-all flex items-center justify-center gap-2"
                   >
                     <CheckCircle className="w-4 h-4" />
-                    Approve
+                    {approvingRequestId === request.id ? "Approving..." : "Approve"}
                   </button>
                 )}
                 {request.approvals >= request.requiredApprovals && (
                   <div className="flex-1 space-y-2">
                     <button
-                      disabled={connectedRole !== "Owner"}
+                      onClick={() => handleExecute(request.id)}
+                      disabled={
+                        connectedRole !== "Owner" ||
+                        executingRequestId === request.id ||
+                        approvingRequestId === request.id
+                      }
                       className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] text-white hover:shadow-[0_0_30px_rgba(108,92,231,0.5)] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Send className="w-4 h-4" />
-                      Execute Withdrawal
+                      {executingRequestId === request.id ? "Executing..." : "Execute Withdrawal"}
                     </button>
                     {connectedRole !== "Owner" && (
                       <p className="text-xs text-yellow-300 text-center">
