@@ -385,6 +385,7 @@ const isZeroAddressLike = (value: string): boolean => {
 };
 
 const getTronWeb = () => (window as any)?.tronWeb;
+const LOG_BLOCK_CHUNK_SIZE = 40_000n;
 
 export const useIdoContract = () => {
   const { address: evmAddress } = useAccount();
@@ -643,6 +644,46 @@ export const useIdoContract = () => {
     usdtBalanceRaw,
     usdtAllowanceRaw,
   ]);
+
+  const getLogsInChunks = async (params: {
+    event: any;
+    args?: Record<string, unknown>;
+    fromBlock?: bigint;
+    toBlock?: bigint | 'latest';
+  }) => {
+    if (!readClient) return [] as any[];
+
+    const startBlock = params.fromBlock ?? 0n;
+    const endBlock =
+      params.toBlock === undefined || params.toBlock === 'latest'
+        ? await readClient.getBlockNumber()
+        : params.toBlock;
+
+    if (endBlock < startBlock) return [] as any[];
+
+    const logs: any[] = [];
+    let chunkStart = startBlock;
+
+    while (chunkStart <= endBlock) {
+      const chunkEnd =
+        chunkStart + LOG_BLOCK_CHUNK_SIZE > endBlock
+          ? endBlock
+          : chunkStart + LOG_BLOCK_CHUNK_SIZE;
+
+      const chunkLogs = await readClient.getLogs({
+        address: IDO_CONTRACT_ADDRESS,
+        event: params.event,
+        args: params.args as any,
+        fromBlock: chunkStart,
+        toBlock: chunkEnd,
+      });
+
+      logs.push(...chunkLogs);
+      chunkStart = chunkEnd + 1n;
+    }
+
+    return logs;
+  };
 
   const approveUsdt = async (amount: string) => {
     if (!address) throw new Error('Wallet not connected');
@@ -1198,8 +1239,7 @@ export const useIdoContract = () => {
     if (!readClient) return null;
 
     try {
-      const logs = await readClient.getLogs({
-        address: IDO_CONTRACT_ADDRESS,
+      const logs = await getLogsInChunks({
         event: INVOICE_PAID_EVENT,
         fromBlock: 0n,
         toBlock: 'latest',
@@ -1252,8 +1292,7 @@ export const useIdoContract = () => {
     if (!readClient) return [];
 
     try {
-      const logs = await readClient.getLogs({
-        address: IDO_CONTRACT_ADDRESS,
+      const logs = await getLogsInChunks({
         event: INVOICE_CREATED_EVENT,
         fromBlock: 0n,
         toBlock: 'latest',
@@ -1450,15 +1489,13 @@ export const useIdoContract = () => {
 
     try {
       const [purchaseLogs, claimLogs] = await Promise.all([
-        readClient.getLogs({
-          address: IDO_CONTRACT_ADDRESS,
+        getLogsInChunks({
           event: TOKENS_PURCHASED_EVENT,
           args: { buyer: target as Address },
           fromBlock: 0n,
           toBlock: 'latest',
         }),
-        readClient.getLogs({
-          address: IDO_CONTRACT_ADDRESS,
+        getLogsInChunks({
           event: TOKENS_CLAIMED_EVENT,
           args: { claimer: target as Address },
           fromBlock: 0n,
