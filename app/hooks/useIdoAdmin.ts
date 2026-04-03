@@ -343,11 +343,21 @@ export const useIdoAdmin = () => {
 
       setIsLoadingRequests(true);
       try {
+        const totalRequests = (await publicClient.readContract({
+          address: IDO_CONTRACT_ADDRESS,
+          abi: IDO_ADMIN_ABI,
+          functionName: "requestCount",
+        })) as bigint;
+
+        const pageSize = 100n;
+        const start = totalRequests > pageSize ? totalRequests - pageSize : 0n;
+        const count = totalRequests > pageSize ? pageSize : totalRequests;
+
         const response = await publicClient.readContract({
           address: IDO_CONTRACT_ADDRESS,
           abi: IDO_ADMIN_ABI,
           functionName: "getRequests",
-          args: [0n, 100n],
+          args: [start, count],
         });
 
         const [chainRequests] = response;
@@ -421,7 +431,10 @@ export const useIdoAdmin = () => {
       } as any);
 
       if (publicClient) {
-        await publicClient.waitForTransactionReceipt({ hash });
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        if (receipt.status !== "success") {
+          throw new Error(`Transaction reverted on-chain. Tx: ${hash}`);
+        }
       }
 
       forceRefresh();
