@@ -44,6 +44,7 @@ export function Treasury() {
     address,
     name: index === 0 ? "Owner" : `Signer ${index}`,
   }));
+  const canCreateRequest = connectedRole === "Owner" || connectedRole === "Admin";
 
   const requests: WithdrawRequest[] = onChainRequests.map((request) => {
     const tokenLower = request.token.toLowerCase();
@@ -198,12 +199,17 @@ export function Treasury() {
 
           <button
             onClick={handleCreateRequest}
-            disabled={isCreating}
+            disabled={isCreating || !canCreateRequest}
             className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] text-white hover:shadow-[0_0_30px_rgba(108,92,231,0.5)] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus className="w-4 h-4" />
             {isCreating ? "Submitting..." : "Create Request"}
           </button>
+          {!canCreateRequest && (
+            <p className="text-xs text-yellow-300 text-center">
+              On-chain Admin or Owner wallet is required to create withdraw requests.
+            </p>
+          )}
         </div>
       </GlassCard>
 

@@ -509,12 +509,26 @@ export const useIdoAdmin = () => {
   };
 
   const createWithdrawRequest = async (token: string, amount: string, to: string, purpose: string) => {
+    if (!address) throw new Error("Wallet not connected");
     if (!isAddress(token)) throw new Error("Invalid token address");
     if (!isAddress(to)) throw new Error("Invalid recipient address");
+
+    const lowerAddress = address.toLowerCase();
+    const isOnChainAdmin = stats.owner === lowerAddress || stats.admins.includes(lowerAddress);
+    if (!isOnChainAdmin) {
+      throw new Error("Connected wallet is not an on-chain admin for creating withdraw requests.");
+    }
 
     const normalizedToken = (token as Address).toLowerCase();
     const normalizedRecipient = (to as Address).toLowerCase();
     const normalizedPurpose = purpose.trim().toLowerCase();
+
+    if (publicClient) {
+      const tokenBytecode = await publicClient.getBytecode({ address: token as Address });
+      if (!tokenBytecode || tokenBytecode === "0x") {
+        throw new Error("Token address is not a deployed contract on Ethereum mainnet.");
+      }
+    }
 
     let decimals = 18;
     if (normalizedToken === USDT_CONTRACT_ADDRESS.toLowerCase()) {
@@ -530,7 +544,7 @@ export const useIdoAdmin = () => {
         })) as number;
         decimals = Number(tokenDecimals);
       } catch {
-        throw new Error("Unable to read token decimals. Use a standard ERC20 token address.");
+        throw new Error("Unable to read token decimals. Token may not be ERC20-compliant.");
       }
     }
 
