@@ -386,6 +386,26 @@ const isZeroAddressLike = (value: string): boolean => {
 
 const getTronWeb = () => (window as any)?.tronWeb;
 const LOG_BLOCK_CHUNK_SIZE = 40_000n;
+const MIN_LOG_BLOCK_CHUNK_SIZE = 1_000n;
+
+const isUserRejectedError = (error: unknown): boolean => {
+  const message = extractErrorMessage(error).toLowerCase();
+  return (
+    message.includes('user rejected') ||
+    message.includes('user denied') ||
+    message.includes('denied transaction signature') ||
+    message.includes('rejected the request')
+  );
+};
+
+const isBlockRangeLimitError = (error: unknown): boolean => {
+  const message = extractErrorMessage(error).toLowerCase();
+  return (
+    message.includes('maximum block range') ||
+    message.includes('max block range') ||
+    message.includes('block range')
+  );
+};
 
 export const useIdoContract = () => {
   const { address: evmAddress } = useAccount();
@@ -663,23 +683,36 @@ export const useIdoContract = () => {
 
     const logs: any[] = [];
     let chunkStart = startBlock;
+    let chunkSize = LOG_BLOCK_CHUNK_SIZE;
 
     while (chunkStart <= endBlock) {
       const chunkEnd =
-        chunkStart + LOG_BLOCK_CHUNK_SIZE > endBlock
+        chunkStart + chunkSize - 1n > endBlock
           ? endBlock
-          : chunkStart + LOG_BLOCK_CHUNK_SIZE;
+          : chunkStart + chunkSize - 1n;
 
-      const chunkLogs = await readClient.getLogs({
-        address: IDO_CONTRACT_ADDRESS,
-        event: params.event,
-        args: params.args as any,
-        fromBlock: chunkStart,
-        toBlock: chunkEnd,
-      });
+      try {
+        const chunkLogs = await readClient.getLogs({
+          address: IDO_CONTRACT_ADDRESS,
+          event: params.event,
+          args: params.args as any,
+          fromBlock: chunkStart,
+          toBlock: chunkEnd,
+        });
 
-      logs.push(...chunkLogs);
-      chunkStart = chunkEnd + 1n;
+        logs.push(...chunkLogs);
+        chunkStart = chunkEnd + 1n;
+      } catch (error) {
+        if (isBlockRangeLimitError(error) && chunkSize > MIN_LOG_BLOCK_CHUNK_SIZE) {
+          chunkSize = chunkSize / 2n;
+          if (chunkSize < MIN_LOG_BLOCK_CHUNK_SIZE) {
+            chunkSize = MIN_LOG_BLOCK_CHUNK_SIZE;
+          }
+          continue;
+        }
+
+        throw error;
+      }
     }
 
     return logs;
@@ -1415,8 +1448,12 @@ export const useIdoContract = () => {
       await publicClient!.waitForTransactionReceipt({ hash });
       return hash;
     } catch (error) {
+      if (isUserRejectedError(error)) {
+        throw new Error('Transaction cancelled in wallet. No on-chain changes were made.');
+      }
+
       console.error('Create invoice failed:', error);
-      throw error;
+      throw new Error(extractErrorMessage(error));
     }
   };
 
