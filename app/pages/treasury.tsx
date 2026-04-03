@@ -4,10 +4,12 @@ import { Wallet, Plus, CheckCircle, Clock, Send, User } from "lucide-react";
 import { formatUnits } from "viem";
 import { useIdoAdmin } from "../hooks/useIdoAdmin";
 import { toast } from "sonner";
+import { USDT_CONTRACT_ADDRESS, TOKEN_CONTRACT_ADDRESS } from "../config/contracts";
 
 interface WithdrawRequest {
   id: number;
   token: string;
+  tokenSymbol: string;
   amount: string;
   recipient: string;
   purpose: string;
@@ -34,6 +36,7 @@ export function Treasury() {
   const [amount, setAmount] = useState("");
   const [recipient, setRecipient] = useState("");
   const [purpose, setPurpose] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
 
   const signers = stats.signers.map((address, index) => ({
     address,
@@ -41,6 +44,14 @@ export function Treasury() {
   }));
 
   const requests: WithdrawRequest[] = onChainRequests.map((request) => {
+    const tokenLower = request.token.toLowerCase();
+    const tokenDecimals = tokenLower === USDT_CONTRACT_ADDRESS.toLowerCase() ? 6 : 18;
+    const tokenSymbol = tokenLower === USDT_CONTRACT_ADDRESS.toLowerCase()
+      ? "USDT"
+      : tokenLower === TOKEN_CONTRACT_ADDRESS.toLowerCase()
+      ? "WLG"
+      : `${request.token.slice(0, 6)}...${request.token.slice(-4)}`;
+
     const approvals = Number(request.approvals);
     const requiredApprovals = stats.requiredApprovals || 1;
     const status: WithdrawRequest["status"] = request.executed
@@ -52,7 +63,8 @@ export function Treasury() {
     return {
       id: Number(request.id),
       token: request.token,
-      amount: Number(formatUnits(request.amount, 6)).toLocaleString(),
+      tokenSymbol,
+      amount: Number(formatUnits(request.amount, tokenDecimals)).toLocaleString(),
       recipient: request.to,
       purpose: request.purpose,
       created: new Date(Number(request.createdAt) * 1000).toLocaleString(),
@@ -67,7 +79,10 @@ export function Treasury() {
   });
 
   const handleCreateRequest = async () => {
+    if (isCreating) return;
+
     try {
+      setIsCreating(true);
       await createWithdrawRequest(tokenAddress, amount, recipient, purpose);
       toast.success("Withdraw request submitted");
       setTokenAddress("");
@@ -76,7 +91,10 @@ export function Treasury() {
       setPurpose("");
     } catch (error) {
       console.error(error);
-      toast.error("Failed to create request");
+      const message = error instanceof Error ? error.message : "Failed to create request";
+      toast.error(message);
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -170,10 +188,11 @@ export function Treasury() {
 
           <button
             onClick={handleCreateRequest}
-            className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] text-white hover:shadow-[0_0_30px_rgba(108,92,231,0.5)] transition-all flex items-center justify-center gap-2"
+            disabled={isCreating}
+            className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] text-white hover:shadow-[0_0_30px_rgba(108,92,231,0.5)] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus className="w-4 h-4" />
-            Create Request
+            {isCreating ? "Submitting..." : "Create Request"}
           </button>
         </div>
       </GlassCard>
@@ -212,8 +231,9 @@ export function Treasury() {
 
               <div className="text-right">
                 <p className="text-2xl text-white">
-                  ${request.amount} {request.token}
+                  ${request.amount} {request.tokenSymbol}
                 </p>
+                <p className="text-xs text-white/40 font-mono">{request.token}</p>
               </div>
             </div>
 
@@ -285,7 +305,6 @@ export function Treasury() {
                 {request.approvals >= request.requiredApprovals && (
                   <div className="flex-1 space-y-2">
                     <button
-                      onClick={() => handleExecute(request.id)}
                       disabled={connectedRole !== "Owner"}
                       className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] text-white hover:shadow-[0_0_30px_rgba(108,92,231,0.5)] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >

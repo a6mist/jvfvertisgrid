@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAccount, usePublicClient, useReadContract, useWriteContract } from "wagmi";
 import { formatUnits, isAddress, parseUnits, type Address } from "viem";
-import { IDO_CONTRACT_ADDRESS, isContractsConfigured } from "../config/contracts";
+import {
+  IDO_CONTRACT_ADDRESS,
+  USDT_CONTRACT_ADDRESS,
+  TOKEN_CONTRACT_ADDRESS,
+  isContractsConfigured,
+} from "../config/contracts";
 
 const ADMIN_READ_CHAIN_ID = 1;
 
@@ -109,6 +114,16 @@ type RequestEntry = {
   createdAt: bigint;
   purpose: string;
 };
+
+const ERC20_DECIMALS_ABI = [
+  {
+    name: "decimals",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint8" }],
+  },
+] as const;
 
 export const useIdoAdmin = () => {
   const { address } = useAccount();
@@ -442,7 +457,45 @@ export const useIdoAdmin = () => {
   const createWithdrawRequest = async (token: string, amount: string, to: string, purpose: string) => {
     if (!isAddress(token)) throw new Error("Invalid token address");
     if (!isAddress(to)) throw new Error("Invalid recipient address");
-    return runWrite("createWithdrawRequest", [token as Address, parseUnits(amount, 6), to as Address, purpose]);
+
+    const normalizedToken = (token as Address).toLowerCase();
+    const normalizedRecipient = (to as Address).toLowerCase();
+    const normalizedPurpose = purpose.trim().toLowerCase();
+
+    let decimals = 18;
+    if (normalizedToken === USDT_CONTRACT_ADDRESS.toLowerCase()) {
+      decimals = 6;
+    } else if (normalizedToken === TOKEN_CONTRACT_ADDRESS.toLowerCase()) {
+      decimals = 18;
+    } else if (publicClient) {
+      try {
+        const tokenDecimals = (await publicClient.readContract({
+          address: token as Address,
+          abi: ERC20_DECIMALS_ABI,
+          functionName: "decimals",
+        })) as number;
+        decimals = Number(tokenDecimals);
+      } catch {
+        throw new Error("Unable to read token decimals. Use a standard ERC20 token address.");
+      }
+    }
+
+    const parsedAmount = parseUnits(amount, decimals);
+    const duplicateRequest = requests.find((request) => {
+      if (request.executed) return false;
+      return (
+        request.token.toLowerCase() === normalizedToken &&
+        request.to.toLowerCase() === normalizedRecipient &&
+        request.amount === parsedAmount &&
+        request.purpose.trim().toLowerCase() === normalizedPurpose
+      );
+    });
+
+    if (duplicateRequest) {
+      throw new Error(`Similar pending request already exists (#${duplicateRequest.id.toString()}).`);
+    }
+
+    return runWrite("createWithdrawRequest", [token as Address, parsedAmount, to as Address, purpose]);
   };
 
   const approveWithdraw = async (requestId: number) => runWrite("approveWithdraw", [BigInt(requestId)]);
