@@ -5,17 +5,10 @@ import { useIdoContract } from '../hooks/useContract';
 import { isContractsConfigured } from '../config/contracts';
 import { DollarSign, ArrowRight, AlertCircle, CheckCircle, Loader2, Shield } from 'lucide-react';
 import { toast } from 'sonner';
-import { useWallet } from '../context/WalletContext';
-import { isTronMode } from '../config/network';
 
 export const BuyTokens = () => {
   const { address, isConnected } = useAccount();
   const { connectors, connectAsync, isPending: isConnectingWallet } = useConnect();
-  const {
-    address: tronAddress,
-    connect: connectTronWallet,
-    isConnecting: isTronConnecting,
-  } = useWallet();
   const { stats, approveUsdt, buyTokens, simulateBuy } = useIdoContract();
   const [usdtAmount, setUsdtAmount] = useState('');
   const [isApproving, setIsApproving] = useState(false);
@@ -23,7 +16,7 @@ export const BuyTokens = () => {
   const [txHash, setTxHash] = useState('');
 
   const simulation = usdtAmount ? simulateBuy(usdtAmount) : null;
-  const walletConnected = isTronMode ? Boolean(tronAddress) : isConnected;
+  const walletConnected = isConnected;
   const canUseContracts = walletConnected && isContractsConfigured;
   const blockReason = !walletConnected
     ? 'Connect wallet first'
@@ -43,17 +36,6 @@ export const BuyTokens = () => {
   });
 
   const handleQuickConnect = async () => {
-    if (isTronMode) {
-      try {
-        await connectTronWallet();
-        toast.success('TronLink connected successfully!');
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to connect TronLink.';
-        toast.error(message);
-      }
-      return;
-    }
-
     const readyConnectors = connectors.filter((connector) => connector.ready ?? true);
     if (readyConnectors.length === 0) {
       toast.error('No wallet connector available.');
@@ -141,10 +123,10 @@ export const BuyTokens = () => {
                     <p>Please connect your wallet to participate in the IDO</p>
                     <button
                       onClick={handleQuickConnect}
-                      disabled={isConnectingWallet || isTronConnecting}
+                      disabled={isConnectingWallet}
                       className="mt-3 px-3 py-2 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/40 text-yellow-100 transition-all disabled:opacity-50"
                     >
-                      {isConnectingWallet || isTronConnecting ? 'Connecting...' : isTronMode ? 'Connect TronLink' : 'Connect Wallet'}
+                      {isConnectingWallet ? 'Connecting...' : 'Connect Wallet'}
                     </button>
                   </div>
                 </div>
