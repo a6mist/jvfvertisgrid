@@ -1449,7 +1449,7 @@ export const useIdoContract = () => {
       return hash;
     } catch (error) {
       if (isUserRejectedError(error)) {
-        throw new Error('Transaction cancelled in wallet. No on-chain changes were made.');
+        throw new Error('Transaction cancelled in wallet. If MetaMask shows Review alert, open it and approve before confirming. No on-chain changes were made.');
       }
 
       console.error('Create invoice failed:', error);
