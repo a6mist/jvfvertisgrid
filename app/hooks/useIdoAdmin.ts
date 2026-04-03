@@ -403,6 +403,16 @@ export const useIdoAdmin = () => {
     if (!isContractsConfigured) throw new Error("Contract address not configured");
 
     try {
+      if (publicClient) {
+        await publicClient.simulateContract({
+          address: IDO_CONTRACT_ADDRESS,
+          abi: IDO_ADMIN_ABI,
+          functionName,
+          args,
+          account: address as Address,
+        } as any);
+      }
+
       const hash = await writeContractAsync({
         address: IDO_CONTRACT_ADDRESS,
         abi: IDO_ADMIN_ABI,
