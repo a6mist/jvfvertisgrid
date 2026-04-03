@@ -90,39 +90,24 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const connect = async () => {
     if (isConnected) return;
 
-    const primaryConnector = getPreferredConnector();
-    if (!primaryConnector) {
+    const connector = getPreferredConnector();
+    if (!connector) {
       throw new Error('No wallet connector available. Install MetaMask or use WalletConnect.');
     }
 
-    const fallbackQueue = [
-      primaryConnector,
-      getWalletConnectConnector(),
-      getMetaMaskConnector(),
-      ...connectors.filter((connector) => connector.ready ?? true),
-    ].filter((connector, index, arr): connector is NonNullable<typeof connector> => {
-      if (!connector) return false;
-      return arr.findIndex((candidate) => candidate?.id === connector.id) === index;
-    });
+    try {
+      await connectAsync({ connector });
 
-    let lastError: unknown;
-    for (const connector of fallbackQueue) {
-      try {
-        await connectAsync({ connector });
-
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem(PREFERRED_CONNECTOR_STORAGE_KEY, connector.id);
-        }
-
-        return;
-      } catch (error) {
-        lastError = error;
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(PREFERRED_CONNECTOR_STORAGE_KEY, connector.id);
       }
-    }
 
-    throw lastError instanceof Error
-      ? lastError
-      : new Error('Failed to connect wallet. Please try WalletConnect or MetaMask app browser.');
+      return;
+    } catch (error) {
+      throw error instanceof Error
+        ? error
+        : new Error('Failed to connect wallet. Please try WalletConnect or MetaMask app browser.');
+    }
   };
 
   const handleDisconnect = () => {

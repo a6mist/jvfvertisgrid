@@ -61,16 +61,15 @@ export function Layout() {
 
   useEffect(() => {
     if (isUnauthorizedConnected) {
-      disconnect();
       if (!hasShownUnauthorizedToast.current) {
-        toast.error("Connecting wallet failed");
+        toast.error("Unauthorized admin wallet connected");
         hasShownUnauthorizedToast.current = true;
       }
       return;
     }
 
     hasShownUnauthorizedToast.current = false;
-  }, [disconnect, isUnauthorizedConnected]);
+  }, [isUnauthorizedConnected]);
 
   const handleWalletClick = async () => {
     if (isTronMode) {
