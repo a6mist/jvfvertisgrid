@@ -387,6 +387,20 @@ const isZeroAddressLike = (value: string): boolean => {
 const getTronWeb = () => (window as any)?.tronWeb;
 const LOG_BLOCK_CHUNK_SIZE = 40_000n;
 const MIN_LOG_BLOCK_CHUNK_SIZE = 1_000n;
+const DEFAULT_LOG_LOOKBACK_BLOCKS = 500_000n;
+
+const configuredDeploymentBlock = (() => {
+  const value = (import.meta as unknown as { env?: Record<string, string | undefined> }).env
+    ?.VITE_IDO_DEPLOYMENT_BLOCK;
+  if (!value) return null;
+
+  try {
+    const parsed = BigInt(value);
+    return parsed >= 0n ? parsed : null;
+  } catch {
+    return null;
+  }
+})();
 
 const isUserRejectedError = (error: unknown): boolean => {
   const message = extractErrorMessage(error).toLowerCase();
@@ -673,11 +687,16 @@ export const useIdoContract = () => {
   }) => {
     if (!readClient) return [] as any[];
 
-    const startBlock = params.fromBlock ?? 0n;
     const endBlock =
       params.toBlock === undefined || params.toBlock === 'latest'
         ? await readClient.getBlockNumber()
         : params.toBlock;
+
+    const requestedStart = params.fromBlock ?? 0n;
+    const fallbackStart =
+      endBlock > DEFAULT_LOG_LOOKBACK_BLOCKS ? endBlock - DEFAULT_LOG_LOOKBACK_BLOCKS : 0n;
+    const boundedDefaultStart = configuredDeploymentBlock ?? fallbackStart;
+    const startBlock = requestedStart === 0n ? boundedDefaultStart : requestedStart;
 
     if (endBlock < startBlock) return [] as any[];
 

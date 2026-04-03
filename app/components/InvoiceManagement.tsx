@@ -10,6 +10,21 @@ const ALLOWED_IDO_ADMIN_WALLET = '0xEb556534041026eF6f5Fd3223cb2b3Ca7E271ec6';
 const MASKED_ALLOWED_IDO_ADMIN_WALLET = '0xEb556*************************************71ec6';
 const ALLOWED_IDO_ADMIN_WALLET_2 = '0x208757a4B5e89b9802A7b2a83Cf7e6DC7C2D49FE';
 const MASKED_ALLOWED_IDO_ADMIN_WALLET_2 = '0x208757*************************************49FE';
+const CHAIN_SYNC_TIMEOUT_MS = 15000;
+
+const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number, fallback: T): Promise<T> => {
+  let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+
+  try {
+    const timeoutPromise = new Promise<T>((resolve) => {
+      timeoutHandle = setTimeout(() => resolve(fallback), timeoutMs);
+    });
+
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutHandle) clearTimeout(timeoutHandle);
+  }
+};
 
 export function InvoiceManagement() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -39,91 +54,104 @@ export function InvoiceManagement() {
 
   const loadInvoices = async () => {
     setIsLoading(true);
-    checkExpiredInvoices();
-    const localInvoices = getInvoices();
+    try {
+      checkExpiredInvoices();
+      const localInvoices = getInvoices();
 
-    const chainInvoiceIds = isContractsConfigured ? await getCreatedInvoiceIds() : [];
-    const knownIds = new Set<string>([
-      ...localInvoices.map((invoice) => invoice.id),
-      ...chainInvoiceIds,
-    ]);
+      const chainInvoiceIds = isContractsConfigured
+        ? await withTimeout(getCreatedInvoiceIds(), CHAIN_SYNC_TIMEOUT_MS, [])
+        : [];
+      const knownIds = new Set<string>([
+        ...localInvoices.map((invoice) => invoice.id),
+        ...chainInvoiceIds,
+      ]);
 
-    const invoiceSeeds: Invoice[] = Array.from(knownIds).map((invoiceId) => {
-      const localMatch = localInvoices.find((invoice) => invoice.id === invoiceId);
-      if (localMatch) return localMatch;
+      const invoiceSeeds: Invoice[] = Array.from(knownIds).map((invoiceId) => {
+        const localMatch = localInvoices.find((invoice) => invoice.id === invoiceId);
+        if (localMatch) return localMatch;
 
-      return {
-        id: invoiceId,
-        amount: 0,
-        tokenAmount: 0,
-        status: 'pending',
-        createdDate: new Date().toISOString(),
-        expiryDate: new Date().toISOString(),
-      };
-    });
-
-    const mergedWithSync = await Promise.all(
-      invoiceSeeds.map(async (localInvoice) => {
-        const onChainInvoice = await getOnChainInvoice(localInvoice.id);
-        if (!onChainInvoice) {
-          return { invoice: localInvoice, chainSynced: false };
-        }
-
-        const nowSeconds = Math.floor(Date.now() / 1000);
-        const isExpired = !onChainInvoice.paid && nowSeconds > onChainInvoice.expiryDate;
-        const resolvedStatus: InvoiceStatus = onChainInvoice.paid
-          ? 'paid'
-          : isExpired
-          ? 'expired'
-          : 'pending';
-
-        const paymentTxHash = onChainInvoice.paid
-          ? await getInvoicePaymentTxHash(localInvoice.id)
-          : null;
-
-        const merged: Invoice = {
-          ...localInvoice,
-          id: onChainInvoice.invoiceId || localInvoice.id,
-          amount: Number(onChainInvoice.usdtAmount),
-          tokenAmount: Number(onChainInvoice.tokenAmount),
-          status: resolvedStatus,
-          expiryDate: new Date(onChainInvoice.expiryDate * 1000).toISOString(),
-          recipientWallet:
-            onChainInvoice.recipientWallet !== '0x0000000000000000000000000000000000000000'
-              ? onChainInvoice.recipientWallet
-              : localInvoice.recipientWallet,
-          notes: onChainInvoice.notes || localInvoice.notes,
-          transactionHash: paymentTxHash || localInvoice.transactionHash,
-          payer:
-            onChainInvoice.payer !== '0x0000000000000000000000000000000000000000'
-              ? onChainInvoice.payer
-              : localInvoice.payer,
-          paidAt: onChainInvoice.paidAt > 0
-            ? new Date(onChainInvoice.paidAt * 1000).toISOString()
-            : localInvoice.paidAt,
-          usdtSpent: Number(onChainInvoice.usdtSpent || 0),
+        return {
+          id: invoiceId,
+          amount: 0,
+          tokenAmount: 0,
+          status: 'pending',
+          createdDate: new Date().toISOString(),
+          expiryDate: new Date().toISOString(),
         };
+      });
 
-        saveInvoice(merged);
-        return { invoice: merged, chainSynced: true };
-      }),
-    );
+      const mergedWithSync = await Promise.all(
+        invoiceSeeds.map(async (localInvoice) => {
+          try {
+            const onChainInvoice = await withTimeout(
+              getOnChainInvoice(localInvoice.id),
+              CHAIN_SYNC_TIMEOUT_MS,
+              null,
+            );
+            if (!onChainInvoice) {
+              return { invoice: localInvoice, chainSynced: false };
+            }
 
-    const syncLookup = mergedWithSync.reduce<Record<string, boolean>>((acc, item) => {
-      acc[item.invoice.id] = item.chainSynced;
-      return acc;
-    }, {});
+            const nowSeconds = Math.floor(Date.now() / 1000);
+            const isExpired = !onChainInvoice.paid && nowSeconds > onChainInvoice.expiryDate;
+            const resolvedStatus: InvoiceStatus = onChainInvoice.paid
+              ? 'paid'
+              : isExpired
+              ? 'expired'
+              : 'pending';
 
-    const mergedInvoices = mergedWithSync.map(item => item.invoice);
+            const paymentTxHash = onChainInvoice.paid
+              ? await withTimeout(getInvoicePaymentTxHash(localInvoice.id), CHAIN_SYNC_TIMEOUT_MS, null)
+              : null;
 
-    setInvoices(
-      mergedInvoices.sort((a, b) =>
-        new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime(),
-      ),
-    );
-    setSyncMap(syncLookup);
-    setLastSyncedAt(new Date());
-    setIsLoading(false);
+            const merged: Invoice = {
+              ...localInvoice,
+              id: onChainInvoice.invoiceId || localInvoice.id,
+              amount: Number(onChainInvoice.usdtAmount),
+              tokenAmount: Number(onChainInvoice.tokenAmount),
+              status: resolvedStatus,
+              expiryDate: new Date(onChainInvoice.expiryDate * 1000).toISOString(),
+              recipientWallet:
+                onChainInvoice.recipientWallet !== '0x0000000000000000000000000000000000000000'
+                  ? onChainInvoice.recipientWallet
+                  : localInvoice.recipientWallet,
+              notes: onChainInvoice.notes || localInvoice.notes,
+              transactionHash: paymentTxHash || localInvoice.transactionHash,
+              payer:
+                onChainInvoice.payer !== '0x0000000000000000000000000000000000000000'
+                  ? onChainInvoice.payer
+                  : localInvoice.payer,
+              paidAt: onChainInvoice.paidAt > 0
+                ? new Date(onChainInvoice.paidAt * 1000).toISOString()
+                : localInvoice.paidAt,
+              usdtSpent: Number(onChainInvoice.usdtSpent || 0),
+            };
+
+            saveInvoice(merged);
+            return { invoice: merged, chainSynced: true };
+          } catch {
+            return { invoice: localInvoice, chainSynced: false };
+          }
+        }),
+      );
+
+      const syncLookup = mergedWithSync.reduce<Record<string, boolean>>((acc, item) => {
+        acc[item.invoice.id] = item.chainSynced;
+        return acc;
+      }, {});
+
+      const mergedInvoices = mergedWithSync.map(item => item.invoice);
+
+      setInvoices(
+        mergedInvoices.sort((a, b) =>
+          new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime(),
+        ),
+      );
+      setSyncMap(syncLookup);
+      setLastSyncedAt(new Date());
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDelete = (id: string) => {
