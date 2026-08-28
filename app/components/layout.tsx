@@ -147,14 +147,14 @@ export function Layout() {
           <div className="flex items-center gap-3">
             <img
               src="/logo.png"
-              alt="wearelegend"
+              alt="JVF Platform"
               className="w-10 h-10 rounded-xl object-cover"
             />
             <div>
               <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] bg-clip-text text-transparent">
-                wearelegend
+                JVF Platform
               </h1>
-              <p className="text-xs text-white/60">Charity IDO Command Center</p>
+              <p className="text-xs text-white/60">Web3 Operations Dashboard</p>
             </div>
           </div>
 
