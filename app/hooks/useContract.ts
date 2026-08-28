@@ -679,6 +679,11 @@ export const useIdoContract = () => {
     usdtAllowanceRaw,
   ]);
 
+  const isLogProviderBlockedError = (error: unknown) => {
+    const message = String(error ?? '');
+    return /403|forbidden|archive.*token|requires.*token|eth_getLogs|getLogs/i.test(message);
+  };
+
   const getLogsInChunks = async (params: {
     event: any;
     args?: Record<string, unknown>;
@@ -728,6 +733,11 @@ export const useIdoContract = () => {
             chunkSize = MIN_LOG_BLOCK_CHUNK_SIZE;
           }
           continue;
+        }
+
+        if (isLogProviderBlockedError(error)) {
+          console.warn('RPC rejected eth_getLogs; continuing without on-chain log sync for invoice management.', error);
+          return logs;
         }
 
         throw error;
