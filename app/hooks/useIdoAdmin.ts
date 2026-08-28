@@ -402,6 +402,7 @@ export const useIdoAdmin = () => {
       | "addAdmin"
       | "removeAdmin"
       | "addSigner"
+
       | "removeSigner"
       | "setRequiredApprovals"
       | "createWithdrawRequest"

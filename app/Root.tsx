@@ -1,21 +1,22 @@
 import { Outlet } from 'react-router';
-import { Navbar } from './components/Navbar';
+import { JVFNav } from './components/JVFNav';
 import { Toaster } from 'sonner';
+import { colors } from './config/design-tokens';
 
 export const Root = () => {
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-      <Navbar />
-      <main className="pt-[calc(4rem+env(safe-area-inset-top))]">
+    <div style={{ background: colors.bg, color: colors.text, minHeight: '100vh', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <JVFNav />
+      <main>
         <Outlet />
       </main>
       <Toaster 
         position="top-right"
         toastOptions={{
           style: {
-            background: '#1a1a2e',
-            color: '#fff',
-            border: '1px solid #6C5CE7',
+            background: colors.surface,
+            color: colors.text,
+            border: `1px solid ${colors.teal}`,
           },
         }}
       />

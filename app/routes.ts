@@ -1,6 +1,12 @@
 import { createBrowserRouter } from 'react-router';
 import { Root } from './Root';
 import { Landing } from './pages/Landing';
+import { Markets } from './pages/Markets';
+import { Platform } from './pages/Platform';
+import { Security } from './pages/Security';
+import { Docs } from './pages/Docs';
+import { SignIn } from './pages/SignIn';
+import { LaunchApp } from './pages/LaunchApp';
 import { Dashboard } from './pages/Dashboard';
 import { BuyTokens } from './pages/BuyTokens';
 import { Portfolio } from './pages/Portfolio';
@@ -22,6 +28,12 @@ export const router = createBrowserRouter([
     Component: Root,
     children: [
       { index: true, Component: Landing },
+      { path: 'markets', Component: Markets },
+      { path: 'platform', Component: Platform },
+      { path: 'security', Component: Security },
+      { path: 'docs', Component: Docs },
+      { path: 'signin', Component: SignIn },
+      { path: 'launch-app', Component: LaunchApp },
       { path: 'main', Component: Landing },
       { path: 'dashboard', Component: Dashboard },
       { path: 'buy', Component: BuyTokens },
