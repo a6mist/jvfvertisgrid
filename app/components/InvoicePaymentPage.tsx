@@ -33,6 +33,7 @@ export function InvoicePaymentPage() {
   const [isTopUpOpen, setIsTopUpOpen] = useState(false);
   const [allowPayDuringSync, setAllowPayDuringSync] = useState(false);
   const [transakAmount, setTransakAmount] = useState('100');
+  const [lookupFailureMessage, setLookupFailureMessage] = useState<string | null>(null);
   const displayUsdtBalance = Number(stats.usdtBalance || 0);
   const rawEthBalance = nativeBalanceData
     ? Number(nativeBalanceData.value) / 10 ** nativeBalanceData.decimals
@@ -164,6 +165,7 @@ export function InvoicePaymentPage() {
 
       if (!invoiceId) {
         setInvoice(null);
+        setLookupFailureMessage('This invoice link is missing an invoice ID.');
         setIsLoadingInvoice(false);
         return;
       }
@@ -173,9 +175,18 @@ export function InvoicePaymentPage() {
 
       if (!onChainInvoice) {
         setInvoice(localInvoice);
+        if (!localInvoice) {
+          setLookupFailureMessage(
+            'This invoice was not found in this browser. Invoice records are stored per browser/device, so open this link in the browser that created it or re-create the invoice if needed.',
+          );
+        } else {
+          setLookupFailureMessage(null);
+        }
         setIsLoadingInvoice(false);
         return;
       }
+
+      setLookupFailureMessage(null);
 
       const nowSeconds = Math.floor(Date.now() / 1000);
       const isExpired = !onChainInvoice.paid && nowSeconds > onChainInvoice.expiryDate;
@@ -385,7 +396,9 @@ export function InvoicePaymentPage() {
         <div className="text-center">
           <XCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-white mb-2">Invoice Not Found</h2>
-          <p className="text-gray-400 mb-6">The invoice ID you're looking for doesn't exist.</p>
+          <p className="text-gray-400 mb-6">
+            {lookupFailureMessage || "The invoice ID you're looking for doesn't exist."}
+          </p>
           <Link 
             to="/"
             className="inline-block px-6 py-3 rounded-xl bg-gradient-to-r from-[#6C5CE7] to-[#00F5D4] text-white font-semibold hover:opacity-90 transition-opacity"
