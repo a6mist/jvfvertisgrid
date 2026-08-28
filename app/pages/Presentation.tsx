@@ -16,14 +16,14 @@ type Slide = {
 const slides: Slide[] = [
   {
     section: 'Abstract',
-    title: 'wearelegend',
-    subtitle: 'A security-forward launch and payment operations protocol for Web3 teams',
+    title: 'JVF Platform',
+    subtitle: 'A transparent financial platform for real-time markets and trading',
     bullets: [
-      'Unifies token sale execution, treasury governance, and invoice operations.',
-      'Separates public participation flows from privileged operator routes.',
-      'Prioritizes auditability and operational control over growth-only UX.',
+      'Direct market data from liquidity venues with no synthetic pricing.',
+      'Audited cold storage with proof-of-reserves published regularly.',
+      'Sub-second execution with transparent spreads and 24/7 settlement.',
     ],
-    note: 'Frame this as infrastructure: wearelegend is built to run operations safely at scale.',
+    note: 'JVF is built for traders who want to see the market as it actually is.',
   },
   {
     section: 'Problem Statement',

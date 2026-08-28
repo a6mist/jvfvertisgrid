@@ -100,7 +100,7 @@ export const BuyTokens = () => {
             Support via IDO
           </span>
         </h1>
-        <p className="text-gray-400">Participate in the IDO while helping fund the wearelegend charity mission</p>
+        <p className="text-gray-400">Participate in the IDO and join our community</p>
       </div>
 
       <div className="mb-6 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">

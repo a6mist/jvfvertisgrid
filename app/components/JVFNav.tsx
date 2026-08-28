@@ -14,19 +14,13 @@ export const JVFNav = () => {
         className="max-w-[1200px] mx-auto px-8 flex items-center justify-between h-[72px]"
       >
         {/* Brand */}
-        <Link to="/" className="flex items-center gap-2">
-          <div
-            className="text-xl font-bold"
-            style={{ fontFamily: 'Space Grotesk, sans-serif', color: colors.text }}
-          >
-            JVF
-          </div>
-          <span
-            className="text-xs font-medium tracking-wider"
-            style={{ color: colors.textFaint, display: 'block', lineHeight: '1.2' }}
-          >
-            VERTIS GRID<br />ONLINE
-          </span>
+        <Link to="/" className="flex items-center gap-3">
+          <img 
+            src="/jvf-logo.png" 
+            alt="JVF Logo" 
+            className="h-8 w-auto"
+            style={{ display: 'block' }}
+          />
         </Link>
 
         {/* Nav Links */}
