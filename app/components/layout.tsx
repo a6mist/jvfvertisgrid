@@ -2,15 +2,33 @@ import { Outlet, NavLink } from "react-router";
 import { LayoutDashboard, Settings, Wallet, FileText, Menu, X, FilePlus2, ReceiptText } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { useAccount, useConnect, useDisconnect, useReadContract } from "wagmi";
 import { toast } from "sonner";
 import { useWallet } from "../context/WalletContext";
 import { isTronMode } from "../config/network";
+import { IDO_CONTRACT_ADDRESS, isContractsConfigured } from "../config/contracts";
 
 const ALLOWED_IDO_ADMIN_WALLET = "0xEb556534041026eF6f5Fd3223cb2b3Ca7E271ec6";
 const MASKED_ALLOWED_IDO_ADMIN_WALLET = "0xEb556*************************************71ec6";
 const ALLOWED_IDO_ADMIN_WALLET_2 = "0x208757a4B5e89b9802A7b2a83Cf7e6DC7C2D49FE";
 const MASKED_ALLOWED_IDO_ADMIN_WALLET_2 = "0x208757*************************************49FE";
+
+const getAllowedAdminWallets = () => {
+  const env = (import.meta as any).env || {};
+  const configuredWallets = String(env.VITE_IDO_ADMIN_WALLETS || '')
+    .split(',')
+    .map((wallet: string) => wallet.trim().toLowerCase())
+    .filter((wallet: string) => wallet.length > 0);
+
+  return configuredWallets.length > 0
+    ? configuredWallets
+    : [ALLOWED_IDO_ADMIN_WALLET, ALLOWED_IDO_ADMIN_WALLET_2].map((wallet) => wallet.toLowerCase());
+};
+
+const ADMIN_ABI = [
+  { name: "owner", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
+  { name: "getAdmins", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "address[]" }] },
+] as const;
 
 export function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -31,16 +49,37 @@ export function Layout() {
     .map((wallet: string) => wallet.trim().toLowerCase())
     .filter((wallet: string) => wallet.length > 0);
 
+  const ownerRead = useReadContract({
+    chainId: 1,
+    address: IDO_CONTRACT_ADDRESS,
+    abi: ADMIN_ABI,
+    functionName: "owner",
+    query: { enabled: isContractsConfigured && !isTronMode },
+  });
+  const adminsRead = useReadContract({
+    chainId: 1,
+    address: IDO_CONTRACT_ADDRESS,
+    abi: ADMIN_ABI,
+    functionName: "getAdmins",
+    query: { enabled: isContractsConfigured && !isTronMode },
+  });
+
   const activeAddress = isTronMode ? tronAddress : address;
   const activeConnected = isTronMode ? Boolean(tronAddress) : isConnected;
+  const allowedAdminWallets = getAllowedAdminWallets();
+  const blockchainAdminWallets = ((adminsRead.data ?? []) as string[]).map((wallet) => wallet.toLowerCase());
+  const blockchainOwnerWallet = ownerRead.data ? String(ownerRead.data).toLowerCase() : "";
+  const isBlockchainAdmin = activeAddress
+    ? blockchainOwnerWallet === activeAddress.toLowerCase() ||
+      blockchainAdminWallets.includes(activeAddress.toLowerCase())
+    : false;
   const isAllowedWallet =
     isTronMode
       ? Boolean(activeAddress) &&
         (tronAdminWallets.length === 0 || tronAdminWallets.includes(activeAddress!.toLowerCase()))
-      : Boolean(address) &&
-        [ALLOWED_IDO_ADMIN_WALLET, ALLOWED_IDO_ADMIN_WALLET_2].some(
-          (wallet) => address.toLowerCase() === wallet.toLowerCase(),
-        );
+      : activeAddress
+        ? allowedAdminWallets.some((wallet) => activeAddress.toLowerCase() === wallet) || isBlockchainAdmin
+        : false;
   const isUnauthorizedConnected = Boolean(activeConnected && activeAddress && !isAllowedWallet);
   const hasAdminAccess = Boolean(activeConnected && isAllowedWallet);
 
@@ -113,12 +152,21 @@ export function Layout() {
       const result = await connectAsync({ connector });
       const connectedAddress = result.accounts?.[0];
 
-      if (
-        !connectedAddress ||
-        ![ALLOWED_IDO_ADMIN_WALLET, ALLOWED_IDO_ADMIN_WALLET_2].some(
-          (wallet) => connectedAddress.toLowerCase() === wallet.toLowerCase(),
-        )
-      ) {
+      if (!connectedAddress) {
+        disconnect();
+        toast.error("Connecting wallet failed");
+        return;
+      }
+
+      const allowedWallets = getAllowedAdminWallets();
+      const blockchainAllowed = (
+        (adminsRead.data ?? []) as string[]
+      )
+        .map((wallet) => wallet.toLowerCase())
+        .includes(connectedAddress.toLowerCase()) ||
+        (ownerRead.data ? String(ownerRead.data).toLowerCase() === connectedAddress.toLowerCase() : false);
+
+      if (!(allowedWallets.some((wallet) => connectedAddress.toLowerCase() === wallet) || blockchainAllowed)) {
         disconnect();
         toast.error("Connecting wallet failed");
       }

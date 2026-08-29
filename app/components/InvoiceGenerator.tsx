@@ -18,6 +18,18 @@ const ADMIN_ABI = [
   },
 ] as const;
 
+const getAllowedAdminWallets = () => {
+  const env = (import.meta as any).env || {};
+  const configuredWallets = String(env.VITE_IDO_ADMIN_WALLETS || '')
+    .split(',')
+    .map((wallet: string) => wallet.trim().toLowerCase())
+    .filter((wallet: string) => wallet.length > 0);
+
+  return configuredWallets.length > 0
+    ? configuredWallets
+    : ['0xeb556534041026ef6f5fd3223cb2b3ca7e271ec6', '0x208757a4b5e89b9802a7b2a83cf7e6dc7c2d49fe'];
+};
+
 export function InvoiceGenerator() {
   const [amount, setAmount] = useState('');
   const [tokenAmount, setTokenAmount] = useState('');
@@ -41,11 +53,13 @@ export function InvoiceGenerator() {
   });
 
   const normalizedAddress = address?.toLowerCase();
+  const allowedAdminWallets = getAllowedAdminWallets();
 
   const isAllowedWallet = isTronMode
     ? Boolean(address)
     : Boolean(normalizedAddress) &&
-      adminWallets.some((admin) => admin.toLowerCase() === normalizedAddress);
+      (allowedAdminWallets.some((admin) => admin === normalizedAddress) ||
+        adminWallets.some((admin) => admin.toLowerCase() === normalizedAddress));
 
   const handleAmountChange = (value: string) => {
     setAmount(value);
