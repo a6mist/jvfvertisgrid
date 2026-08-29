@@ -133,8 +133,8 @@ export function InvoiceGenerator() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const invoiceUrl = generatedInvoice 
-    ? `${window.location.origin}/pay/${generatedInvoice.id}`
+  const invoiceUrl = generatedInvoice
+    ? `${window.location.origin}/pay/${generatedInvoice.id}?amount=${encodeURIComponent(String(generatedInvoice.amount))}&tokenAmount=${encodeURIComponent(String(generatedInvoice.tokenAmount))}&expiryDate=${encodeURIComponent(generatedInvoice.expiryDate)}&recipientWallet=${encodeURIComponent(generatedInvoice.recipientWallet || '')}&notes=${encodeURIComponent(generatedInvoice.notes || '')}`
     : '';
 
   if (!isAllowedWallet) {

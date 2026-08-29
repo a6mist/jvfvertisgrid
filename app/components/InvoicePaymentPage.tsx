@@ -173,9 +173,34 @@ export function InvoicePaymentPage() {
       const localInvoice = getInvoiceById(invoiceId);
       const onChainInvoice = await getOnChainInvoice(invoiceId);
 
+      const fallbackUrlInvoice = (() => {
+        const params = new URLSearchParams(window.location.search);
+        const amount = Number(params.get('amount') || '0');
+        const tokenAmount = Number(params.get('tokenAmount') || '0');
+        const expiryDate = params.get('expiryDate');
+        const recipientWallet = params.get('recipientWallet') || undefined;
+        const notes = params.get('notes') || undefined;
+
+        if (!expiryDate || !Number.isFinite(amount) || amount <= 0) {
+          return null;
+        }
+
+        return {
+          id: invoiceId,
+          amount,
+          tokenAmount,
+          status: 'pending' as const,
+          createdDate: new Date().toISOString(),
+          expiryDate: new Date(expiryDate).toISOString(),
+          recipientWallet,
+          notes,
+        };
+      })();
+
       if (!onChainInvoice) {
-        setInvoice(localInvoice);
-        if (!localInvoice) {
+        const resolvedInvoice = localInvoice || fallbackUrlInvoice;
+        setInvoice(resolvedInvoice);
+        if (!resolvedInvoice) {
           setLookupFailureMessage(
             'This invoice was not found in this browser. Invoice records are stored per browser/device, so open this link in the browser that created it or re-create the invoice if needed.',
           );
