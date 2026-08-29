@@ -6,11 +6,11 @@ const projectId =
   import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '837f8ebbe4c248fe3b3df2895ff53db1';
 
 const mainnetRpcUrl =
-  import.meta.env.VITE_MAINNET_RPC_URL || 'https://rpc.ankr.com/eth';
+  import.meta.env.VITE_MAINNET_RPC_URL || 'https://ethereum-rpc.publicnode.com';
 const bscRpcUrl =
-  import.meta.env.VITE_BSC_RPC_URL || 'https://rpc.ankr.com/bsc';
+  import.meta.env.VITE_BSC_RPC_URL || 'https://bsc-rpc.publicnode.com';
 const polygonRpcUrl =
-  import.meta.env.VITE_POLYGON_RPC_URL || 'https://rpc.ankr.com/polygon';
+  import.meta.env.VITE_POLYGON_RPC_URL || 'https://polygon-bor-rpc.publicnode.com';
 const appUrl = import.meta.env.VITE_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'https://www.wearelegend.online');
 
 export const config = createConfig({
