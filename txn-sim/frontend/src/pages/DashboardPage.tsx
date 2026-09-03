@@ -38,7 +38,7 @@ export function DashboardPage() {
       <div>
         <h1 className="text-xl font-semibold">Dashboard</h1>
         <p className="text-sm text-console-textFaint mt-1">
-          Overview of transaction simulations. All figures reflect local test data only.
+          Overview of transaction simulations.
         </p>
       </div>
 
