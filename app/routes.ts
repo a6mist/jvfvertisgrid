@@ -22,6 +22,7 @@ import { Controls } from './pages/controls';
 import { Treasury } from './pages/treasury';
 import { Logs } from './pages/logs';
 import { ProtocolsVerification } from './pages/ProtocolsVerification';
+import { ProtocolNetwork } from './pages/ProtocolNetwork';
 
 export const router = createBrowserRouter([
   {
@@ -41,6 +42,7 @@ export const router = createBrowserRouter([
       { path: 'portfolio', Component: Portfolio },
       { path: 'presentation', Component: Presentation },
       { path: 'protocolsverification', Component: ProtocolsVerification },
+      { path: 'protocolnetwork', Component: ProtocolNetwork },
     ],
   },
   {
