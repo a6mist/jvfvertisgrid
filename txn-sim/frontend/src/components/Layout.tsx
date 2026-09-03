@@ -20,8 +20,8 @@ export function Layout() {
       <div className="flex flex-1 min-h-0">
         <aside className="w-60 shrink-0 border-r border-console-border bg-console-panel flex flex-col">
           <div className="px-4 py-4 border-b border-console-border">
-            <div className="text-sm font-semibold tracking-tight">Protocol Simulator</div>
-            <div className="text-[11px] text-console-textFaint mt-0.5">Console v1.0.0 · Simulation Only</div>
+            <div className="text-sm font-semibold tracking-tight">Protocol Console</div>
+            <div className="text-[11px] text-console-textFaint mt-0.5">Console v1.0.0</div>
           </div>
           <nav className="flex-1 py-3 px-2 space-y-0.5">
             {NAV_ITEMS.map((item) => (
