@@ -1,0 +1,153 @@
+// Transaction Verification & Protocol Simulator — Data Model
+// SIMULATION MODE ONLY. No real cardholder data is ever modeled or stored here.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  OPERATOR
+  VIEWER
+}
+
+enum CardNetwork {
+  VISA
+  MASTERCARD
+}
+
+enum CardType {
+  DEBIT
+  CREDIT
+  PREPAID
+}
+
+enum SimulationStatus {
+  PENDING
+  RUNNING
+  VERIFIED
+  FAILED
+}
+
+enum StepStatus {
+  PENDING
+  SUCCESS
+  WARNING
+  FAILED
+  SKIPPED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role     @default(VIEWER)
+  createdAt    DateTime @default(now())
+
+  simulations Simulation[]
+  auditLogs   AuditLog[]
+}
+
+// A configurable protocol definition. Every protocol is explicitly marked
+// as either "simulator-defined" or backed by the supplied reference material —
+// never presented as an official Visa/Mastercard specification.
+model ProtocolDefinition {
+  id                  String   @id @default(uuid())
+  code                String   @unique // e.g. "101.1", "201.3"
+  name                String
+  version             String   @default("1.0.0")
+  description         String
+  isOfficial          Boolean  @default(false) // always false unless legally verified — kept for schema completeness
+  classificationLabel String   @default("Custom simulation protocol — not an official Visa/Mastercard specification.")
+  inputRequirements   Json // string[]
+  validationRules     Json // string[]
+  simulationSteps     Json // string[] — ordered step names for this protocol
+  successConditions   Json // string[]
+  failureConditions   Json // string[]
+  active              Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  simulations Simulation[]
+}
+
+model Simulation {
+  id                String           @id @default(uuid())
+  testTransactionId String           @unique // e.g. SIM-2026-000001
+  protocolId        String
+  protocol          ProtocolDefinition @relation(fields: [protocolId], references: [id])
+
+  cardNetwork      CardNetwork
+  syntheticCardRef String // e.g. TEST-VISA-9447 — never a real PAN
+  cardType         CardType
+  syntheticIssuer  String
+
+  currency        String
+  amount          Decimal @db.Decimal(14, 2)
+  transactionType String
+  referenceNumber String
+  testAuthCode    String
+  testAccountStatus String
+
+  status            SimulationStatus @default(PENDING)
+  simulationRefId   String?          @unique // generated on completion, e.g. SIM-REF-XXXXXXX
+  overallResult     String? // SUCCESS | FAILED | WARNING
+  processingDurationMs Int?
+  errorScenario     String? // set when the user intentionally requests an error-path simulation
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  steps     SimulationStep[]
+  auditLogs AuditLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SimulationStep {
+  id           String     @id @default(uuid())
+  simulationId String
+  simulation   Simulation @relation(fields: [simulationId], references: [id], onDelete: Cascade)
+
+  stepName   String
+  stepOrder  Int
+  status     StepStatus @default(PENDING)
+  startedAt  DateTime?
+  finishedAt DateTime?
+  durationMs Int?
+  result     String?
+  diagnostic Json? // non-sensitive diagnostic key/value pairs only
+
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id            String   @id @default(uuid())
+  simulationId  String?
+  simulation    Simulation? @relation(fields: [simulationId], references: [id])
+  transactionRef String? // denormalized testTransactionId for easy display
+
+  protocolCode String?
+  eventType    String // e.g. SIMULATION_CREATED, PROTOCOL_EXECUTED, SIMULATION_COMPLETED
+  result       String? // SUCCESS | FAILED | WARNING | INFO
+  systemVersion String  @default("1.0.0")
+  metadata     Json? // non-sensitive metadata only — never authentication secrets
+
+  actorId String?
+  actor   User?  @relation(fields: [actorId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model SystemSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}

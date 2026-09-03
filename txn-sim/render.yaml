@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: txn-sim-api
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npx prisma migrate deploy && npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 8h
+      - key: NODE_ENV
+        value: production
+      - key: CORS_ORIGIN
+        sync: false

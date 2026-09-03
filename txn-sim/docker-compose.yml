@@ -1,0 +1,19 @@
+version: "3.9"
+
+# Local development database only. Not used to connect to any real payment
+# or banking network — this project never does that.
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: txnsim
+      POSTGRES_PASSWORD: txnsim_dev_password
+      POSTGRES_DB: txnsim
+    ports:
+      - "5432:5432"
+    volumes:
+      - txnsim_pgdata:/var/lib/postgresql/data
+
+volumes:
+  txnsim_pgdata:

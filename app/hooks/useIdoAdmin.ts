@@ -167,6 +167,18 @@ const isUserRejectedError = (error: unknown): boolean => {
   );
 };
 
+const isRpcLogReadFailure = (error: unknown): boolean => {
+  const message = extractErrorMessage(error).toLowerCase();
+  return (
+    message.includes("403") ||
+    message.includes("forbidden") ||
+    message.includes("eth_getlogs") ||
+    message.includes("eth_get_logs") ||
+    message.includes("archive") ||
+    message.includes("requires a personal token")
+  );
+};
+
 export const useIdoAdmin = () => {
   const { address } = useAccount();
   const { writeContractAsync } = useWriteContract();
@@ -332,7 +344,13 @@ export const useIdoAdmin = () => {
         } else {
           setAveragePurchase("0");
         }
-      } catch {
+      } catch (error) {
+        if (isRpcLogReadFailure(error)) {
+          setTotalParticipants(0);
+          setAveragePurchase("0");
+          return;
+        }
+
         setTotalParticipants(0);
         setAveragePurchase("0");
       }

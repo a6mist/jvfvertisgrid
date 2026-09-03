@@ -1,0 +1,17 @@
+{
+  "name": "txn-sim",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Visa/Mastercard Transaction Verification & Protocol Simulator — simulation mode only.",
+  "workspaces": ["backend", "frontend"],
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm run dev -w backend\" \"npm run dev -w frontend\"",
+    "build": "npm run build -w backend && npm run build -w frontend",
+    "prisma:migrate": "npm run prisma:migrate -w backend",
+    "prisma:seed": "npm run prisma:seed -w backend",
+    "test": "npm run test -w backend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

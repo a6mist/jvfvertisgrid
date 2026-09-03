@@ -21,6 +21,7 @@ import { Dashboard as IdoAdminDashboard } from './pages/dashboard(1)';
 import { Controls } from './pages/controls';
 import { Treasury } from './pages/treasury';
 import { Logs } from './pages/logs';
+import { ProtocolsVerification } from './pages/ProtocolsVerification';
 
 export const router = createBrowserRouter([
   {
@@ -39,6 +40,7 @@ export const router = createBrowserRouter([
       { path: 'buy', Component: BuyTokens },
       { path: 'portfolio', Component: Portfolio },
       { path: 'presentation', Component: Presentation },
+      { path: 'protocolsverification', Component: ProtocolsVerification },
     ],
   },
   {
