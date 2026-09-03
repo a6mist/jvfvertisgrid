@@ -140,7 +140,7 @@ export function VerifyTransactionPage() {
               <select className={inputCls} value={form.protocolCode} onChange={(e) => update("protocolCode", e.target.value)}>
                 {protocols.map((p) => (
                   <option key={p.code} value={p.code}>
-                    {p.code} — {p.name}
+                    {p.code}
                   </option>
                 ))}
               </select>
