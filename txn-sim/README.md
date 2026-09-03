@@ -140,13 +140,18 @@ npm run dev
 This starts the API on `http://localhost:4000` and the console UI on
 `http://localhost:5173` (which proxies `/api` to the backend).
 
-### Demo accounts (all fictional, password `Password123!`)
+### Demo accounts (all fictional, separate demo passwords)
 
 | Role     | Email                     |
 |----------|---------------------------|
 | ADMIN    | admin@jvfvertisgrid.online      |
 | OPERATOR | operator@jvfvertisgrid.online   |
 | VIEWER   | Viewer@jvfvertisgrid.online     |
+| PAYER    | payer@jvfvertisgrid.online      |
+
+The payer account uses existing `VIEWER` permissions because `PAYER` is not a
+database role in this simulator. Run the seed command to print the current demo
+passwords in the terminal; do not commit production credentials.
 
 ### 7. Run tests
 

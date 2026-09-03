@@ -15,7 +15,12 @@ const prisma = new PrismaClient();
 
 async function main() {
   console.log("Seeding fictional users...");
-  const passwordHash = await bcrypt.hash("Password123!", 12);
+  const passwords = {
+    admin: "AvaAdmin!2026#Jvf",
+    operator: "OwenOperator!2026#Jvf",
+    viewer: "VeraViewer!2026#Jvf",
+    payer: "PayerAccount!2026#Jvf",
+  };
 
   const emailMigrations = [
     ["admin@simulator.test", "admin@jvfvertisgrid.online"],
@@ -31,20 +36,46 @@ async function main() {
 
   const admin = await prisma.user.upsert({
     where: { email: "admin@jvfvertisgrid.online" },
-    update: {},
-    create: { email: "admin@jvfvertisgrid.online", name: "Ava Administrator", passwordHash, role: "ADMIN" },
+    update: { passwordHash: await bcrypt.hash(passwords.admin, 12), role: "ADMIN" },
+    create: {
+      email: "admin@jvfvertisgrid.online",
+      name: "Ava Administrator",
+      passwordHash: await bcrypt.hash(passwords.admin, 12),
+      role: "ADMIN",
+    },
   });
 
   const operator = await prisma.user.upsert({
     where: { email: "operator@jvfvertisgrid.online" },
-    update: {},
-    create: { email: "operator@jvfvertisgrid.online", name: "Owen Operator", passwordHash, role: "OPERATOR" },
+    update: { passwordHash: await bcrypt.hash(passwords.operator, 12), role: "OPERATOR" },
+    create: {
+      email: "operator@jvfvertisgrid.online",
+      name: "Owen Operator",
+      passwordHash: await bcrypt.hash(passwords.operator, 12),
+      role: "OPERATOR",
+    },
+  });
+
+  const viewer = await prisma.user.upsert({
+    where: { email: "Viewer@jvfvertisgrid.online" },
+    update: { passwordHash: await bcrypt.hash(passwords.viewer, 12), role: "VIEWER" },
+    create: {
+      email: "Viewer@jvfvertisgrid.online",
+      name: "Vera Viewer",
+      passwordHash: await bcrypt.hash(passwords.viewer, 12),
+      role: "VIEWER",
+    },
   });
 
   await prisma.user.upsert({
-    where: { email: "Viewer@jvfvertisgrid.online" },
-    update: {},
-    create: { email: "Viewer@jvfvertisgrid.online", name: "Vera Viewer", passwordHash, role: "VIEWER" },
+    where: { email: "payer@jvfvertisgrid.online" },
+    update: { passwordHash: await bcrypt.hash(passwords.payer, 12), role: "VIEWER" },
+    create: {
+      email: "payer@jvfvertisgrid.online",
+      name: "Parker Payer",
+      passwordHash: await bcrypt.hash(passwords.payer, 12),
+      role: "VIEWER",
+    },
   });
 
   console.log("Seeding protocol definitions...");
@@ -230,10 +261,11 @@ async function main() {
   }
 
   console.log("Seed complete.");
-  console.log("Demo accounts (password for all: Password123!):");
-  console.log("  ADMIN    admin@jvfvertisgrid.online");
-  console.log("  OPERATOR operator@jvfvertisgrid.online");
-  console.log("  VIEWER   Viewer@jvfvertisgrid.online");
+  console.log("Demo accounts (each account has a different password):");
+  console.log(`  ADMIN    admin@jvfvertisgrid.online / ${passwords.admin}`);
+  console.log(`  OPERATOR operator@jvfvertisgrid.online / ${passwords.operator}`);
+  console.log(`  VIEWER   Viewer@jvfvertisgrid.online / ${passwords.viewer}`);
+  console.log(`  PAYER    payer@jvfvertisgrid.online / ${passwords.payer} (VIEWER permissions)`);
 }
 
 main()
