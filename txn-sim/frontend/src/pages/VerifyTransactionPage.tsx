@@ -211,7 +211,7 @@ export function VerifyTransactionPage() {
           {result && phase === "done" && (
             <div className="mt-4 border-t border-console-border pt-4 space-y-2">
               <div className="text-sm font-semibold">
-                SIMULATION {result.decision ?? (result.overallResult === "FAILED" ? "DENIED" : "APPROVED")}
+                {result.decision ?? (result.overallResult === "FAILED" ? "DENIED" : "APPROVED")}
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs data-mono text-console-textDim">
                 <div>Protocol: {result.protocol.code}</div>
