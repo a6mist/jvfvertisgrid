@@ -130,13 +130,13 @@ export class ProtocolEngine {
       case "UNSUPPORTED_CURRENCY":
         return "CHECKING_CURRENCY";
       case "EXPIRED_TEST_REFERENCE":
-        return "CHECKING_SYNTHETIC_CARD_REFERENCE";
+        return "CHECKING_CARD_REFERENCE";
       case "INVALID_TRANSACTION_TYPE":
         return "CHECKING_TRANSACTION_TYPE";
       case "PROTOCOL_VALIDATION_FAILURE":
         return "RUNNING_PROTOCOL_RULES";
       case "SIMULATED_NETWORK_TIMEOUT":
-        return "GENERATING_SIMULATED_RESULT";
+        return "GENERATING_RESULT";
       case "SIMULATED_PROCESSOR_UNAVAILABLE":
         return "RUNNING_PROTOCOL_RULES";
       case "SIMULATED_AUTHORIZATION_FAILURE":
@@ -199,7 +199,7 @@ export class ProtocolEngine {
           diagnostic: { classification: "Custom simulation protocol" },
         };
 
-      case "CHECKING_SYNTHETIC_CARD_REFERENCE": {
+      case "CHECKING_CARD_REFERENCE": {
         if (forced) {
           return {
             stepName,
@@ -316,7 +316,7 @@ export class ProtocolEngine {
         };
       }
 
-      case "GENERATING_SIMULATED_RESULT":
+      case "GENERATING_RESULT":
         if (forced) {
           return {
             stepName,

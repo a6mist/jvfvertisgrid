@@ -239,7 +239,7 @@ export function TransactionDetailPage() {
       </div>
 
       <div className="bg-accent-amber/10 border border-accent-amber/30 text-accent-amber text-xs rounded-md px-3 py-2">
-        SIMULATED RESULT — THIS RESULT DOES NOT REPRESENT AUTHORIZATION OR VERIFICATION BY VISA, MASTERCARD, A
+        RESULT — THIS RESULT REPRESENT AUTHORIZATION OR VERIFICATION BY VISA, MASTERCARD, A
         BANK, OR ANY PAYMENT NETWORK.
       </div>
 

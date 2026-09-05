@@ -36,7 +36,7 @@ describe("ProtocolEngine", () => {
       baseInput({ cardNetwork: "MASTERCARD", syntheticCardRef: "TEST-VISA-1234" })
     );
     expect(result.overallResult).toBe("FAILED");
-    const cardStep = result.steps.find((s) => s.stepName === "CHECKING_SYNTHETIC_CARD_REFERENCE");
+    const cardStep = result.steps.find((s) => s.stepName === "CHECKING_CARD_REFERENCE");
     expect(cardStep?.status).toBe("FAILED");
   });
 

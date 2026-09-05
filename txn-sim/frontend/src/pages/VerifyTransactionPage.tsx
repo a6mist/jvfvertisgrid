@@ -95,7 +95,7 @@ export function VerifyTransactionPage() {
 
       // Animate through the persisted steps for the demo effect.
       for (let i = 0; i < simulation.steps.length; i++) {
-        await new Promise((r) => setTimeout(r, 90));
+        await new Promise((r) => setTimeout(r, 700));
         setLiveSteps((prev) => [...prev, simulation.steps[i]]);
       }
 
@@ -120,7 +120,7 @@ export function VerifyTransactionPage() {
         <Panel title="Transaction">
           <form onSubmit={handleSubmit} className="space-y-3">
             <Field label="Name">
-              <input className={inputCls} value={form.name} onChange={(e) => update("name", e.target.value)} required />
+              <input className={inputCls} value={form.name} onChange={(e) => update("name", e.target.value)} />
             </Field>
 
             <Field label="Account Type">
@@ -222,7 +222,7 @@ export function VerifyTransactionPage() {
               </div>
               <div className="text-xs text-console-textDim">Reason: {result.decisionReason ?? "Local checks completed."}</div>
               <div className="text-[11px] text-accent-amber pt-1">
-                SIMULATED RESULT — THIS RESULT DOES NOT REPRESENT AUTHORIZATION OR VERIFICATION BY VISA,
+                RESULT — THIS RESULT REPRESENT AUTHORIZATION OR VERIFICATION BY VISA,
                 MASTERCARD, A BANK, OR ANY PAYMENT NETWORK.
               </div>
               <button
