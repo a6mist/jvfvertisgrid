@@ -45,7 +45,7 @@ export function TransactionsPage() {
     <div className="space-y-5">
       <div>
         <h1 className="text-xl font-semibold">Transactions</h1>
-        <p className="text-sm text-console-textFaint mt-1">Searchable history of transaction simulations.</p>
+        <p className="text-sm text-console-textFaint mt-1">Searchable history of transaction.</p>
       </div>
 
       <Panel>
