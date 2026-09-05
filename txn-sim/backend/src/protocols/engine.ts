@@ -129,17 +129,17 @@ export class ProtocolEngine {
         return "CHECKING_AMOUNT";
       case "UNSUPPORTED_CURRENCY":
         return "CHECKING_CURRENCY";
-      case "EXPIRED_TEST_REFERENCE":
+      case "EXPIRED_REFERENCE":
         return "CHECKING_CARD_REFERENCE";
       case "INVALID_TRANSACTION_TYPE":
         return "CHECKING_TRANSACTION_TYPE";
       case "PROTOCOL_VALIDATION_FAILURE":
         return "RUNNING_PROTOCOL_RULES";
-      case "SIMULATED_NETWORK_TIMEOUT":
+      case "NETWORK_TIMEOUT":
         return "GENERATING_RESULT";
-      case "SIMULATED_PROCESSOR_UNAVAILABLE":
+      case "PROCESSOR_UNAVAILABLE":
         return "RUNNING_PROTOCOL_RULES";
-      case "SIMULATED_AUTHORIZATION_FAILURE":
+      case "AUTHORIZATION_FAILURE":
         return "RUNNING_PROTOCOL_RULES";
       default:
         return null;
