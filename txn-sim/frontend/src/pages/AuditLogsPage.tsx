@@ -29,7 +29,7 @@ export function AuditLogsPage() {
       <div>
         <h1 className="text-xl font-semibold">Audit Logs</h1>
         <p className="text-sm text-console-textFaint mt-1">
-          Immutable-style record of every simulation event. No authentication secrets are ever logged here.
+          Immutable-style record of every event. No authentication secrets are ever logged here.
         </p>
       </div>
 
@@ -37,8 +37,8 @@ export function AuditLogsPage() {
         <div className="flex gap-2 mb-4">
           <select value={eventType} onChange={(e) => setEventType(e.target.value)} className="rounded-md bg-console-panelAlt border border-console-border px-3 py-2 text-sm">
             <option value="">All event types</option>
-            <option value="SIMULATION_CREATED">SIMULATION_CREATED</option>
-            <option value="SIMULATION_COMPLETED">SIMULATION_COMPLETED</option>
+            <option value="SIMULATION_CREATED">CREATED</option>
+            <option value="SIMULATION_COMPLETED">COMPLETED</option>
           </select>
           <select value={protocolCode} onChange={(e) => setProtocolCode(e.target.value)} className="rounded-md bg-console-panelAlt border border-console-border px-3 py-2 text-sm">
             <option value="">All protocols</option>
@@ -70,7 +70,7 @@ export function AuditLogsPage() {
                   <td className="py-2 pr-4 data-mono text-console-textFaint text-xs">{log.id.slice(0, 8)}</td>
                   <td className="py-2 pr-4 data-mono text-accent-teal">{log.transactionRef ?? "—"}</td>
                   <td className="py-2 pr-4 data-mono text-console-textDim">{log.protocolCode ?? "—"}</td>
-                  <td className="py-2 pr-4 text-console-textDim">{log.eventType}</td>
+                  <td className="py-2 pr-4 text-console-textDim">{log.eventType.replace(/^SIMULATION_/, "")}</td>
                   <td className="py-2 pr-4">{log.result ? <StatusBadge status={log.result} /> : "—"}</td>
                   <td className="py-2 pr-4 text-console-textFaint text-xs">{log.actor?.name ?? "system"}</td>
                   <td className="py-2 pr-4 data-mono text-console-textFaint text-xs">{log.systemVersion}</td>
