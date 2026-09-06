@@ -43,7 +43,7 @@ export function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <StatCard label="Total simulations" value={summary.totals.total} />
+        <StatCard label="Total" value={summary.totals.total} />
         <StatCard label="Verified" value={summary.totals.verified} tone="teal" />
         <StatCard label="Failed" value={summary.totals.failed} tone="red" />
         <StatCard label="Pending" value={summary.totals.pending} tone="blue" />
@@ -123,7 +123,7 @@ export function DashboardPage() {
               {summary.recent.length === 0 && (
                 <tr>
                   <td colSpan={6} className="py-6 text-center text-console-textFaint text-sm">
-                    No simulations yet. Run one from DATA VERIFIED BY JVF VISA/MASTERCARD.
+                    No records yet. Run one from DATA VERIFIED BY JVF VISA/MASTERCARD.
                   </td>
                 </tr>
               )}
