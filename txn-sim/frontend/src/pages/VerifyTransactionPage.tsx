@@ -77,7 +77,7 @@ export function VerifyTransactionPage() {
     try {
       const payload = {
         ...form,
-        syntheticCardRef: `TEST-${form.cardNetwork}-9447`,
+        syntheticCardRef: `${form.cardNetwork}-9447`,
         syntheticIssuer: "Local Training Dataset",
         transactionType: "PURCHASE",
         referenceNumber: `SIM-REF-${randomSuffix()}`,
@@ -218,7 +218,7 @@ export function VerifyTransactionPage() {
                 <div>Network: {result.cardNetwork}</div>
                 <div>Result: {result.overallResult}</div>
                 <div>Duration: {result.processingDurationMs} ms</div>
-                <div className="col-span-2">Reference: {result.simulationRefId}</div>
+                <div className="col-span-2">Reference: {result.simulationRefId?.replace(/^SIM-/, "")}</div>
               </div>
               <div className="text-xs text-console-textDim">Reason: {result.decisionReason ?? "Local checks completed."}</div>
               <div className="text-[11px] text-accent-amber pt-1">

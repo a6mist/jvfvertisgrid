@@ -132,7 +132,7 @@ export function TransactionsPage() {
                   <td className="py-2 pr-4 data-mono">
                     {tx.currency} {Number(tx.amount).toLocaleString()}
                   </td>
-                  <td className="py-2 pr-4 data-mono text-console-textFaint">{tx.syntheticCardRef}</td>
+                  <td className="py-2 pr-4 data-mono text-console-textFaint">{tx.syntheticCardRef?.replace(/^TEST-/, "")}</td>
                   <td className="py-2 pr-4">
                     <StatusBadge status={tx.status} />
                   </td>
@@ -258,7 +258,7 @@ export function TransactionDetailPage() {
 
         <Panel title="Card information">
           <dl className="text-sm space-y-2">
-            <Row label="Test card reference" value={simulation.syntheticCardRef} mono />
+            <Row label="Card reference" value={simulation.syntheticCardRef?.replace(/^TEST-/, "")} mono />
             <Row label="Card network" value={simulation.cardNetwork} />
             <Row label="Card type" value={simulation.cardType} />
             <Row label="Issuer" value={simulation.syntheticIssuer} />
@@ -271,7 +271,7 @@ export function TransactionDetailPage() {
             <Row label="Overall status" value={<StatusBadge status={simulation.status} />} />
             <Row label="Protocol result" value={simulation.overallResult ?? "—"} />
             <Row label="Processing duration" value={simulation.processingDurationMs ? `${simulation.processingDurationMs} ms` : "—"} mono />
-            <Row label="Simulation reference ID" value={simulation.simulationRefId ?? "—"} mono />
+            <Row label="Reference ID" value={simulation.simulationRefId?.replace(/^SIM-/, "") ?? "—"} mono />
           </dl>
         </Panel>
 
