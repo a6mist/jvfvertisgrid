@@ -6,7 +6,6 @@ const NAV_ITEMS = [
   { to: "/", label: "Dashboard", end: true },
   { to: "/transactions", label: "Transactions" },
   { to: "/verify", label: "DATA VERIFIED BY JVF VISA/MASTERCARD" },
-  { to: "/protocols", label: "Protocols" },
   { to: "/audit-logs", label: "Audit Logs" },
 ];
 
