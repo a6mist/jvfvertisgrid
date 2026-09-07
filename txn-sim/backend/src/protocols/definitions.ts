@@ -74,15 +74,15 @@ export const PROTOCOL_SEEDS: ProtocolSeed[] = [
     name: "Currency & Amount Bounds Check",
     version: "1.0.0",
     description:
-      "Simulator-defined workflow that checks the transaction currency is on the supported list and the amount falls within configured simulation bounds.",
+      "Simulator-defined workflow that checks the transaction currency is on the supported list and the amount is at least the configured minimum.",
     inputRequirements: ["currency", "amount"],
     validationRules: [
       "Currency must be in the configured supported currency list",
-      "Amount must be between the configured minimum and maximum simulation bounds",
+      "Amount must meet the configured minimum simulation bound",
     ],
     simulationSteps: BASE_STEPS,
     successConditions: ["Currency supported and amount within bounds"],
-    failureConditions: ["Unsupported currency or amount outside configured bounds"],
+    failureConditions: ["Unsupported currency or amount below the configured minimum"],
   },
   {
     code: "101.4",

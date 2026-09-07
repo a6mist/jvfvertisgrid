@@ -53,7 +53,7 @@ export const createSimulationSchema = z.object({
   cardType: z.enum(["DEBIT", "CREDIT", "PREPAID"]),
   syntheticIssuer: z.string().min(1).max(80),
   currency: z.string().length(3),
-  amount: z.number().positive().max(5_000_000),
+  amount: z.number().positive().finite(),
   transactionType: z.string().min(1),
   referenceNumber: z.string().min(1).max(60),
   testAuthCode: z

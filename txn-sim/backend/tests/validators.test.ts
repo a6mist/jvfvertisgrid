@@ -35,6 +35,10 @@ describe("createSimulationSchema", () => {
     expect(() => createSimulationSchema.parse(valid)).not.toThrow();
   });
 
+  it("accepts a large positive amount without an upper limit", () => {
+    expect(() => createSimulationSchema.parse({ ...valid, amount: 1_000_000_000 })).not.toThrow();
+  });
+
   it("rejects a card reference that looks like a real PAN", () => {
     expect(() => createSimulationSchema.parse({ ...valid, syntheticCardRef: "4111111111111111" })).toThrow();
   });

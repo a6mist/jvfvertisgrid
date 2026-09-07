@@ -46,6 +46,12 @@ describe("ProtocolEngine", () => {
     expect(result.overallResult).toBe("FAILED");
   });
 
+  it("accepts a large positive amount", () => {
+    const protocol = PROTOCOL_SEEDS.find((p) => p.code === "101.1")!;
+    const result = protocolEngine.run(protocol, baseInput({ amount: 1_000_000_000 }));
+    expect(result.overallResult).toBe("SUCCESS");
+  });
+
   it("fails and skips downstream steps for a RESTRICTED synthetic account status", () => {
     const protocol = PROTOCOL_SEEDS.find((p) => p.code === "101.6")!;
     const result = protocolEngine.run(protocol, baseInput({ testAccountStatus: "RESTRICTED" }));

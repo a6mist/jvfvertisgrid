@@ -77,7 +77,7 @@ export function VerifyTransactionPage() {
     try {
       const payload = {
         ...form,
-        syntheticCardRef: `${form.cardNetwork}-9447`,
+        syntheticCardRef: `TEST-${form.cardNetwork}-9447`,
         syntheticIssuer: "Local Training Dataset",
         transactionType: "PURCHASE",
         referenceNumber: `SIM-REF-${randomSuffix()}`,
@@ -253,5 +253,5 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 }
 
 function TestInput({ value, placeholder, onChange }: { value: string; placeholder: string; onChange: (value: string) => void }) {
-  return <input type="text" className={inputCls} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} pattern="TEST-[A-Za-z0-9-]+" title="Use a TEST- value only" />;
+  return <input type="text" className={inputCls} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} pattern="TEST-[A-Za-z0-9\-]+" title="Use a TEST- value only" />;
 }

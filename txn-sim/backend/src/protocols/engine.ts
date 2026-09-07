@@ -58,7 +58,6 @@ export interface EngineRunResult {
 const SUPPORTED_CURRENCIES = ["USD", "EUR", "GBP", "JPY", "AUD", "CAD", "PHP", "SGD"];
 const SUPPORTED_TRANSACTION_TYPES = ["PURCHASE", "REFUND", "AUTHORIZATION", "REVERSAL", "PREAUTH"];
 const MIN_AMOUNT = 0.01;
-const MAX_AMOUNT = 5_000_000;
 
 function refId(): string {
   const rand = Math.floor(Math.random() * 9_000_000) + 1_000_000;
@@ -245,12 +244,12 @@ export class ProtocolEngine {
       }
 
       case "CHECKING_AMOUNT": {
-        if (forced || input.amount < MIN_AMOUNT || input.amount > MAX_AMOUNT || Number.isNaN(input.amount)) {
+        if (forced || input.amount < MIN_AMOUNT || !Number.isFinite(input.amount)) {
           return {
             stepName,
             status: "FAILED",
-            result: `Amount ${input.amount} is outside the configured simulation bounds (${MIN_AMOUNT}–${MAX_AMOUNT}).`,
-            diagnostic: { amount: input.amount, min: MIN_AMOUNT, max: MAX_AMOUNT },
+            result: `Amount ${input.amount} must be at least ${MIN_AMOUNT}.`,
+            diagnostic: { amount: input.amount, min: MIN_AMOUNT },
           };
         }
         return {
