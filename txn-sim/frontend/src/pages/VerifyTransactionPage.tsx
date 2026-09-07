@@ -253,5 +253,5 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 }
 
 function TestInput({ value, placeholder, onChange }: { value: string; placeholder: string; onChange: (value: string) => void }) {
-  return <input type="text" className={inputCls} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} pattern="TEST-[A-Za-z0-9\-]+" title="Use a TEST- value only" />;
+  return <input type="text" className={inputCls} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />;
 }
