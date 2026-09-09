@@ -1,4 +1,6 @@
-const SIMULATOR_URL = 'https://jvf-protocolnetwork.vercel.app/protocolsverification';
+const SIMULATOR_URL = window.location.pathname === '/controls'
+  ? 'https://jvf-protocolnetwork.vercel.app/controls'
+  : 'https://jvf-protocolnetwork.vercel.app/protocolsverification';
 
 export function ProtocolNetwork() {
   return (
