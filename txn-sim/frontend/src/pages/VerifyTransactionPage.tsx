@@ -238,7 +238,7 @@ export function VerifyTransactionPage() {
 }
 
 function ProtocolOutcomeToggle({ result }: { result: any }) {
-  const isSuccessful = result.overallResult === "SUCCESS" && result.decision === "APPROVED";
+  const isSuccessful = result.overallResult === "SUCCESS" && result.decision !== "DENIED";
   const outcomeLabel = isSuccessful ? "Approved" : "Declined";
   const resultLabel = isSuccessful ? "Success" : "Failed";
 
