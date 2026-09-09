@@ -44,6 +44,7 @@ export const router = createBrowserRouter([
       { path: 'protocolsverification', Component: ProtocolsVerification },
       { path: 'protocolnetwork', Component: ProtocolNetwork },
       { path: 'controls', Component: ProtocolNetwork },
+      { path: 'protocolnetwork/controls', Component: ProtocolNetwork },
     ],
   },
   {
