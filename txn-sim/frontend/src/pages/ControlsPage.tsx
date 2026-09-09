@@ -17,10 +17,26 @@ export function ControlsPage() {
   const [declinedEnabled, setDeclinedEnabled] = useState(false);
 
   useEffect(() => {
-    api.get("/simulations", { params: { page: "1", pageSize: "20" } })
-      .then((res) => setTransactions(res.data.items ?? []))
+    Promise.all([
+      api.get("/simulations", { params: { page: "1", pageSize: "20" } }),
+      api.get("/settings/approval"),
+    ])
+      .then(([transactionsRes, settingsRes]) => {
+        setTransactions(transactionsRes.data.items ?? []);
+        setApprovedEnabled(settingsRes.data.approvedEnabled !== false);
+      })
       .catch(() => setTransactions([]));
   }, []);
+
+  async function handleApprovedChange(enabled: boolean) {
+    const previous = approvedEnabled;
+    setApprovedEnabled(enabled);
+    try {
+      await api.patch("/settings/approval", { approvedEnabled: enabled });
+    } catch {
+      setApprovedEnabled(previous);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -32,7 +48,7 @@ export function ControlsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <OutcomeCard enabled={approvedEnabled} onChange={setApprovedEnabled} label="Approved" result="Success" />
+        <OutcomeCard enabled={approvedEnabled} onChange={handleApprovedChange} label="Approved" result="Success" />
         <OutcomeCard enabled={declinedEnabled} onChange={setDeclinedEnabled} label="Declined" result="Failed" />
       </div>
 

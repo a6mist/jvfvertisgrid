@@ -45,6 +45,9 @@ export class VerificationService {
       errorScenario: (simulation.errorScenario as SimulationInput["errorScenario"]) ?? undefined,
     };
 
+    const approvalSetting = await prisma.systemSetting.findUnique({ where: { key: "approved_enabled" } });
+    engineInput.forceDecline = approvalSetting?.value === false;
+
     const runResult = protocolEngine.run(protocolSeed, engineInput);
 
     // Persist step results

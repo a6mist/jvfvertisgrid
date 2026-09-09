@@ -29,6 +29,14 @@ describe("ProtocolEngine", () => {
     expect(result.simulationRefId).toMatch(/^SIM-REF-\d+$/);
   });
 
+  it("denies an otherwise valid transaction when approval control is off", () => {
+    const protocol = PROTOCOL_SEEDS.find((p) => p.code === "101.1")!;
+    const result = protocolEngine.run(protocol, baseInput({ forceDecline: true }));
+    expect(result.overallResult).toBe("FAILED");
+    expect(result.decision).toBe("DENIED");
+    expect(result.decisionReason).toBe("Declined");
+  });
+
   it("fails when the synthetic card reference does not match the declared network", () => {
     const protocol = PROTOCOL_SEEDS.find((p) => p.code === "101.2")!;
     const result = protocolEngine.run(

@@ -25,6 +25,7 @@ export interface SimulationInput {
   testAccountStatus: string;
   /** Optional: intentionally force a specific error-path scenario for QA/training. */
   errorScenario?: ErrorScenario;
+  forceDecline?: boolean;
 }
 
 export type ErrorScenario =
@@ -110,10 +111,23 @@ export class ProtocolEngine {
     const processingDurationMs = steps.reduce((sum, s) => sum + s.durationMs, 0);
     const failedStep = steps.find((step) => step.status === "FAILED");
 
+    if (input.forceDecline && !hasFailed) {
+      const completionStep = steps.find((step) => step.stepName === "COMPLETED");
+      if (completionStep) {
+        completionStep.status = "FAILED";
+        completionStep.result = "Declined";
+        completionStep.diagnostic = { control: "approved_enabled", enabled: false };
+      }
+    }
+
+    const declinedByControl = input.forceDecline && !hasFailed;
+
     return {
-      overallResult,
-      decision: hasFailed ? "DENIED" : "APPROVED",
-      decisionReason: failedStep?.result ?? "All configured synthetic checks passed.",
+      overallResult: declinedByControl ? "FAILED" : overallResult,
+      decision: hasFailed || declinedByControl ? "DENIED" : "APPROVED",
+      decisionReason: declinedByControl
+        ? "Declined"
+        : failedStep?.result ?? "All configured synthetic checks passed.",
       simulationRefId: refId(),
       processingDurationMs,
       steps,
