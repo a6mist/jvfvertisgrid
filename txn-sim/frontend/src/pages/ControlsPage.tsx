@@ -13,6 +13,8 @@ interface Transaction {
 
 export function ControlsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [approvedEnabled, setApprovedEnabled] = useState(true);
+  const [declinedEnabled, setDeclinedEnabled] = useState(false);
 
   useEffect(() => {
     api.get("/simulations", { params: { page: "1", pageSize: "20" } })
@@ -30,8 +32,8 @@ export function ControlsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <OutcomeCard enabled label="Approved" result="Success" />
-        <OutcomeCard label="Declined" result="Failed" />
+        <OutcomeCard enabled={approvedEnabled} onChange={setApprovedEnabled} label="Approved" result="Success" />
+        <OutcomeCard enabled={declinedEnabled} onChange={setDeclinedEnabled} label="Declined" result="Failed" />
       </div>
 
       <section className="rounded-md border border-console-border bg-console-panel">
@@ -80,21 +82,25 @@ export function ControlsPage() {
   );
 }
 
-function OutcomeCard({ enabled = false, label, result }: { enabled?: boolean; label: string; result: string }) {
+function OutcomeCard({ enabled, onChange, label, result }: { enabled: boolean; onChange: (enabled: boolean) => void; label: string; result: string }) {
   return (
     <div className="rounded-md border border-console-border bg-console-panel p-4">
       <div className="text-xs uppercase tracking-wide text-console-textFaint">{label}</div>
-      <div className="mt-3"><OutcomeToggle enabled={enabled} /></div>
+      <div className="mt-3"><OutcomeToggle enabled={enabled} onChange={onChange} /></div>
       <div className="mt-3 text-xs text-console-textDim">{result}</div>
     </div>
   );
 }
 
-function OutcomeToggle({ enabled }: { enabled: boolean }) {
+function OutcomeToggle({ enabled, onChange }: { enabled: boolean; onChange?: (enabled: boolean) => void }) {
   return (
-    <div
+    <button
+      type="button"
+      onClick={() => onChange?.(!enabled)}
+      role="switch"
+      aria-checked={enabled}
       aria-label={enabled ? "On: Approved / Success" : "Off: Declined / Failed"}
-      className={`inline-flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wide ${
+      className={`inline-flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wide transition-colors hover:brightness-110 ${
         enabled ? "border-accent-teal/40 bg-accent-teal/10 text-accent-teal" : "border-accent-red/40 bg-accent-red/10 text-accent-red"
       }`}
     >
@@ -103,6 +109,6 @@ function OutcomeToggle({ enabled }: { enabled: boolean }) {
       </span>
       <span>{enabled ? "On" : "Off"}</span>
       <span className="normal-case tracking-normal">{enabled ? "Approved / Success" : "Declined / Failed"}</span>
-    </div>
+    </button>
   );
 }
