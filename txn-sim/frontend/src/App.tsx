@@ -9,6 +9,7 @@ import { VerifyTransactionPage } from "./pages/VerifyTransactionPage";
 import { ProtocolsPage, ProtocolDetailPage } from "./pages/ProtocolsPage";
 import { AuditLogsPage } from "./pages/AuditLogsPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { ControlsPage } from "./pages/ControlsPage";
 
 export function App() {
   return (
@@ -28,6 +29,7 @@ export function App() {
             <Route path="/transactions/:id" element={<TransactionDetailPage />} />
             <Route path="/verify" element={<VerifyTransactionPage />} />
             <Route path="/protocolsverification" element={<VerifyTransactionPage />} />
+            <Route path="/controls" element={<ControlsPage />} />
             <Route path="/protocols" element={<ProtocolsPage />} />
             <Route path="/protocols/:code" element={<ProtocolDetailPage />} />
             <Route path="/audit-logs" element={<AuditLogsPage />} />

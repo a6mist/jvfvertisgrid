@@ -1,4 +1,4 @@
-const SIMULATOR_URL = 'https://jvf-protocolnetwork.vercel.app/';
+const SIMULATOR_URL = 'https://jvf-protocolnetwork.vercel.app/controls';
 
 export function ProtocolNetwork() {
   return (
