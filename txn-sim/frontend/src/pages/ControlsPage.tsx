@@ -49,7 +49,7 @@ export function ControlsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <OutcomeCard enabled={approvedEnabled} onChange={handleApprovedChange} label="Approved" result="Success" />
-        <OutcomeCard enabled={declinedEnabled} onChange={setDeclinedEnabled} label="Declined" result="Failed" />
+        <OutcomeCard enabled={declinedEnabled} onChange={setDeclinedEnabled} label="Declined" result="Failed" showToggle={false} />
       </div>
 
       <section className="rounded-md border border-console-border bg-console-panel">
@@ -98,11 +98,11 @@ export function ControlsPage() {
   );
 }
 
-function OutcomeCard({ enabled, onChange, label, result }: { enabled: boolean; onChange: (enabled: boolean) => void; label: string; result: string }) {
+function OutcomeCard({ enabled, onChange, label, result, showToggle = true }: { enabled: boolean; onChange: (enabled: boolean) => void; label: string; result: string; showToggle?: boolean }) {
   return (
     <div className="rounded-md border border-console-border bg-console-panel p-4">
       <div className="text-xs uppercase tracking-wide text-console-textFaint">{label}</div>
-      <div className="mt-3"><OutcomeToggle enabled={enabled} onChange={onChange} /></div>
+      {showToggle && <div className="mt-3"><OutcomeToggle enabled={enabled} onChange={onChange} /></div>}
       <div className="mt-3 text-xs text-console-textDim">{result}</div>
     </div>
   );
