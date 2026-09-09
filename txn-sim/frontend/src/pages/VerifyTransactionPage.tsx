@@ -210,9 +210,7 @@ export function VerifyTransactionPage() {
 
           {result && phase === "done" && (
             <div className="mt-4 border-t border-console-border pt-4 space-y-2">
-              <div className="text-sm font-semibold">
-                {result.decision ?? (result.overallResult === "FAILED" ? "DENIED" : "APPROVED")}
-              </div>
+              <ProtocolOutcomeToggle result={result} />
               <div className="grid grid-cols-2 gap-2 text-xs data-mono text-console-textDim">
                 <div>Protocol: {result.protocol.code}</div>
                 <div>Network: {result.cardNetwork}</div>
@@ -234,6 +232,47 @@ export function VerifyTransactionPage() {
             </div>
           )}
         </Panel>
+      </div>
+    </div>
+  );
+}
+
+function ProtocolOutcomeToggle({ result }: { result: any }) {
+  const isSuccessful = result.overallResult === "SUCCESS" && result.decision === "APPROVED";
+  const stateLabel = isSuccessful ? "On" : "Off";
+  const outcomeLabel = isSuccessful ? "Approved" : "Declined";
+  const resultLabel = isSuccessful ? "Success" : "Failed";
+
+  return (
+    <div
+      aria-label={`${stateLabel}: ${outcomeLabel} / ${resultLabel}`}
+      className={`flex h-12 items-center justify-between rounded-md border px-3 ${
+        isSuccessful
+          ? "border-accent-teal/40 bg-accent-teal/10"
+          : "border-accent-red/40 bg-accent-red/10"
+      }`}
+    >
+      <div>
+        <div className={`text-sm font-semibold ${isSuccessful ? "text-accent-teal" : "text-accent-red"}`}>
+          {outcomeLabel}
+        </div>
+        <div className="text-[11px] text-console-textDim">{resultLabel}</div>
+      </div>
+      <div
+        role="switch"
+        aria-checked={isSuccessful}
+        className={`relative h-6 w-12 rounded-full transition-colors ${
+          isSuccessful ? "bg-accent-teal" : "bg-accent-red/70"
+        }`}
+      >
+        <span
+          className={`absolute top-1 h-4 w-4 rounded-full bg-console-bg transition-transform ${
+            isSuccessful ? "translate-x-7" : "translate-x-1"
+          }`}
+        />
+        <span className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold uppercase text-console-bg">
+          {stateLabel}
+        </span>
       </div>
     </div>
   );

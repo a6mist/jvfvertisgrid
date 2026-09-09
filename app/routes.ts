@@ -43,6 +43,7 @@ export const router = createBrowserRouter([
       { path: 'presentation', Component: Presentation },
       { path: 'protocolsverification', Component: ProtocolsVerification },
       { path: 'protocolnetwork', Component: ProtocolNetwork },
+      { path: 'controls', Component: ProtocolNetwork },
     ],
   },
   {
