@@ -225,7 +225,7 @@ export function TransactionDetailPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold data-mono">{simulation.testTransactionId}</h1>
-          <p className="text-sm text-console-textFaint mt-1">Simulated verification report</p>
+          <p className="text-sm text-console-textFaint mt-1">Verification report</p>
         </div>
         {simulation.status === "PENDING" && (
           <button
