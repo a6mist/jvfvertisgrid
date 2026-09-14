@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite'
+import fs from 'node:fs'
 import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
@@ -15,11 +16,34 @@ export default defineConfig({
       modernPolyfills: true,
       renderLegacyChunks: true,
     }),
+    {
+      name: 'copy-transaction-log-pages',
+      closeBundle() {
+        const outputDirectory = path.resolve(__dirname, 'dist/jvf-transaction-log')
+        fs.mkdirSync(outputDirectory, { recursive: true })
+        for (const page of ['jvf-log.html', 'jvf-input.html']) {
+          fs.copyFileSync(
+            path.resolve(__dirname, `jvf-transaction-log/${page}`),
+            path.resolve(outputDirectory, page),
+          )
+        }
+      },
+    },
   ],
   resolve: {
     alias: {
       // Alias @ to the app directory
       '@': path.resolve(__dirname, './app'),
+    },
+  },
+
+  build: {
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        transactionLog: path.resolve(__dirname, 'jvf-transaction-log/jvf-log.html'),
+        transactionInput: path.resolve(__dirname, 'jvf-transaction-log/jvf-input.html'),
+      },
     },
   },
 

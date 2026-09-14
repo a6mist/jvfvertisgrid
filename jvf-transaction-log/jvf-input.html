@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en" data-mode="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JVF Platform — Input</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root{
+    --ink:#0F141B;
+    --surface:#171E27;
+    --surface-raised:#1D2531;
+    --border:#2B3441;
+    --border-strong:#3A4553;
+    --paper:#EDEAE2;
+    --paper-dim:#9BA5B0;
+    --paper-faint:#6B7480;
+    --brass:#C9A876;
+    --success:#6FB98A;
+    --danger:#D97C7C;
+    --font-serif:'Source Serif 4', Georgia, serif;
+    --font-sans:'Inter', -apple-system, sans-serif;
+    --font-mono:'JetBrains Mono', 'SF Mono', Consolas, monospace;
+  }
+
+  *{ box-sizing:border-box; }
+
+  body{
+    margin:0;
+    background:var(--ink);
+    color:var(--paper);
+    font-family:var(--font-sans);
+    min-height:100vh;
+    padding:0 0 4rem;
+  }
+
+  .wrap{
+    max-width:960px;
+    margin:0 auto;
+    padding:0 24px;
+  }
+
+  header{
+    padding:40px 0 28px;
+    border-bottom:1px solid var(--border);
+    margin-bottom:24px;
+  }
+
+  .eyebrow{
+    font-size:13px;
+    color:var(--brass);
+    font-family:var(--font-mono);
+    letter-spacing:0.02em;
+    margin:0 0 8px;
+  }
+
+  h1{
+    font-family:var(--font-serif);
+    font-weight:600;
+    font-size:30px;
+    margin:0 0 6px;
+  }
+
+  .subtitle{
+    color:var(--paper-dim);
+    font-size:14px;
+    margin:0;
+    max-width:56ch;
+    line-height:1.6;
+  }
+
+  .nav-pages{
+    display:flex;
+    gap:4px;
+    margin-bottom:24px;
+    border-bottom:1px solid var(--border);
+  }
+
+  .nav-link{
+    display:inline-block;
+    padding:10px 4px;
+    margin-right:24px;
+    font-size:14px;
+    font-weight:500;
+    color:var(--paper-faint);
+    text-decoration:none;
+    border-bottom:2px solid transparent;
+  }
+
+  .nav-link:hover{ color:var(--paper-dim); }
+
+  .nav-link.active{
+    color:var(--paper);
+    border-bottom-color:var(--brass);
+  }
+
+  section.panel{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:24px;
+  }
+
+  .panel-title{
+    font-family:var(--font-serif);
+    font-size:17px;
+    font-weight:600;
+    margin:0 0 4px;
+  }
+
+  .panel-desc{
+    font-size:13px;
+    color:var(--paper-faint);
+    margin:0 0 20px;
+  }
+
+  .form-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px 20px;
+  }
+
+  .field{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+
+  label{
+    font-size:12px;
+    color:var(--paper-dim);
+  }
+
+  input{
+    background:var(--ink);
+    border:1px solid var(--border-strong);
+    border-radius:7px;
+    color:var(--paper);
+    font-family:var(--font-mono);
+    font-size:14px;
+    padding:10px 12px;
+    outline:none;
+    transition:border-color .15s;
+  }
+
+  input::placeholder{
+    color:var(--paper-faint);
+    font-family:var(--font-sans);
+  }
+
+  input:focus{ border-color:var(--brass); }
+  input.err{ border-color:var(--danger); }
+
+  .field-error{
+    font-size:12px;
+    color:var(--danger);
+    min-height:14px;
+  }
+
+  .form-actions{
+    display:flex;
+    justify-content:flex-end;
+    align-items:center;
+    gap:12px;
+    margin-top:20px;
+    padding-top:16px;
+    border-top:1px solid var(--border);
+  }
+
+  .hint{
+    font-size:12px;
+    color:var(--paper-faint);
+    margin-right:auto;
+  }
+
+  button{
+    font-family:var(--font-sans);
+    font-size:14px;
+    font-weight:500;
+    border-radius:7px;
+    border:1px solid transparent;
+    padding:10px 18px;
+    cursor:pointer;
+    transition:opacity .15s, background .15s;
+  }
+
+  button.primary{
+    background:var(--brass);
+    color:#20180C;
+  }
+
+  button.primary:hover{ opacity:0.88; }
+
+  button.ghost{
+    background:transparent;
+    border-color:var(--border-strong);
+    color:var(--paper-dim);
+  }
+
+  button.ghost:hover{
+    background:var(--surface-raised);
+    color:var(--paper);
+  }
+
+  .toast{
+    position:fixed;
+    bottom:24px;
+    left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--surface-raised);
+    border:1px solid var(--border-strong);
+    color:var(--paper);
+    padding:10px 18px;
+    border-radius:8px;
+    font-size:13px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s, transform .2s;
+  }
+
+  .toast.show{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
+  }
+
+  @media (max-width:640px){
+    .form-grid{ grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">JVF Platform · internal ops</p>
+    <h1>Transaction log</h1>
+    <p class="subtitle">Manual entry for reviewed transactions. Enter the details below and confirm to add a record to the log.</p>
+  </header>
+
+  <div class="nav-pages">
+    <a class="nav-link active" href="/input" aria-current="page">Input</a>
+    <a class="nav-link" href="/logs">Log</a>
+  </div>
+
+  <section class="panel">
+    <p class="panel-title">New entry</p>
+    <p class="panel-desc">All fields are required before the entry can be confirmed.</p>
+
+    <div class="form-grid">
+      <div class="field">
+        <label for="txnHash">Transaction hash</label>
+        <input id="txnHash" type="text" placeholder="0x8f3a...c21d">
+        <div class="field-error" id="err-txnHash"></div>
+      </div>
+
+      <div class="field">
+        <label for="txnDate">Date and time</label>
+        <input id="txnDate" type="datetime-local">
+        <div class="field-error" id="err-txnDate"></div>
+      </div>
+
+      <div class="field">
+        <label for="approvalCode">Approval code</label>
+        <input id="approvalCode" type="text" placeholder="POS auth code, e.g. A1B2C3">
+        <div class="field-error" id="err-approvalCode"></div>
+      </div>
+
+      <div class="field">
+        <label for="amount">Amount (USDT)</label>
+        <input id="amount" type="number" step="0.01" min="0" placeholder="0.00">
+        <div class="field-error" id="err-amount"></div>
+      </div>
+
+      <div class="field">
+        <label for="results">Results</label>
+        <input id="results" type="text" list="resultsOptions" placeholder="Success, Reject, Expired, Cancelled">
+        <datalist id="resultsOptions">
+          <option value="Success">
+          <option value="Reject">
+          <option value="Expired">
+          <option value="Cancelled">
+        </datalist>
+        <div class="field-error" id="err-results"></div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <span class="hint" id="formHint">Fill in all fields, then confirm to log the transaction.</span>
+      <button class="ghost" id="clearBtn" type="button">Clear</button>
+      <button class="primary" id="confirmBtn" type="button">Confirm entry</button>
+    </div>
+  </section>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'jvf-txn-log-entries';
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=> t.classList.remove('show'), 1800);
+}
+
+function clearErrors(){
+  ['txnHash','txnDate','approvalCode','amount','results'].forEach(id=>{
+    document.getElementById(id).classList.remove('err');
+    document.getElementById('err-'+id).textContent = '';
+  });
+}
+
+function setError(id, msg){
+  document.getElementById(id).classList.add('err');
+  document.getElementById('err-'+id).textContent = msg;
+}
+
+function validate(){
+  clearErrors();
+  let ok = true;
+  const hash = document.getElementById('txnHash').value.trim();
+  const date = document.getElementById('txnDate').value;
+  const code = document.getElementById('approvalCode').value.trim();
+  const amount = document.getElementById('amount').value;
+  const results = document.getElementById('results').value.trim();
+  const allowedResults = ['Success','Reject','Expired','Cancelled'];
+
+  if(!hash){ setError('txnHash', 'Enter the transaction hash.'); ok = false; }
+  if(!date){ setError('txnDate', 'Select a date and time.'); ok = false; }
+  if(!code){ setError('approvalCode', 'Enter the approval code.'); ok = false; }
+  if(!amount || Number(amount) <= 0){ setError('amount', 'Enter an amount greater than 0.'); ok = false; }
+  if(!results){
+    setError('results', 'Enter a result.');
+    ok = false;
+  } else if(!allowedResults.includes(results)){
+    setError('results', 'Use one of: Success, Reject, Expired, Cancelled.');
+    ok = false;
+  }
+
+  return ok ? {hash, date, code, amount:Number(amount), results} : null;
+}
+
+function clearForm(){
+  document.getElementById('txnHash').value = '';
+  document.getElementById('txnDate').value = '';
+  document.getElementById('approvalCode').value = '';
+  document.getElementById('amount').value = '';
+  document.getElementById('results').value = '';
+  clearErrors();
+}
+
+async function confirmEntry(){
+  const data = validate();
+  if(!data) return;
+
+  let entries = [];
+  try{
+    entries = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  }catch(e){
+    entries = [];
+  }
+
+  entries.unshift({
+    id: Date.now(),
+    hash: data.hash,
+    date: data.date,
+    code: data.code,
+    amount: data.amount,
+    results: data.results
+  });
+
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+  }catch(e){
+    console.error('Storage error', e);
+  }
+
+  clearForm();
+  showToast('Entry logged — view it on the Log page');
+}
+
+document.getElementById('confirmBtn').addEventListener('click', confirmEntry);
+document.getElementById('clearBtn').addEventListener('click', clearForm);
+</script>
+
+</body>
+</html>

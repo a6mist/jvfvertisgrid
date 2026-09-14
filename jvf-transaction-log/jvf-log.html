@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en" data-mode="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JVF Platform — Log</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root{
+    --ink:#0F141B;
+    --surface:#171E27;
+    --surface-raised:#1D2531;
+    --border:#2B3441;
+    --border-strong:#3A4553;
+    --paper:#EDEAE2;
+    --paper-dim:#9BA5B0;
+    --paper-faint:#6B7480;
+    --brass:#C9A876;
+    --success:#6FB98A;
+    --success-bg:#16261D;
+    --danger:#D97C7C;
+    --font-serif:'Source Serif 4', Georgia, serif;
+    --font-sans:'Inter', -apple-system, sans-serif;
+    --font-mono:'JetBrains Mono', 'SF Mono', Consolas, monospace;
+  }
+
+  *{ box-sizing:border-box; }
+
+  body{
+    margin:0;
+    background:var(--ink);
+    color:var(--paper);
+    font-family:var(--font-sans);
+    min-height:100vh;
+    padding:0 0 4rem;
+  }
+
+  .wrap{
+    max-width:960px;
+    margin:0 auto;
+    padding:0 24px;
+  }
+
+  header{
+    padding:40px 0 28px;
+    border-bottom:1px solid var(--border);
+    margin-bottom:24px;
+  }
+
+  .eyebrow{
+    font-size:13px;
+    color:var(--brass);
+    font-family:var(--font-mono);
+    letter-spacing:0.02em;
+    margin:0 0 8px;
+  }
+
+  h1{
+    font-family:var(--font-serif);
+    font-weight:600;
+    font-size:30px;
+    margin:0 0 6px;
+  }
+
+  .subtitle{
+    color:var(--paper-dim);
+    font-size:14px;
+    margin:0;
+    max-width:56ch;
+    line-height:1.6;
+  }
+
+  .stats{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:1px;
+    background:var(--border);
+    border:1px solid var(--border);
+    border-radius:10px;
+    overflow:hidden;
+    margin-top:28px;
+  }
+
+  .stat{
+    background:var(--surface);
+    padding:16px 20px;
+  }
+
+  .stat-label{
+    font-size:12px;
+    color:var(--paper-faint);
+    margin:0 0 6px;
+  }
+
+  .stat-value{
+    font-family:var(--font-mono);
+    font-size:20px;
+    font-weight:500;
+    margin:0;
+  }
+
+  .nav-pages{
+    display:flex;
+    gap:4px;
+    margin-bottom:24px;
+    border-bottom:1px solid var(--border);
+  }
+
+  .nav-link{
+    display:inline-block;
+    padding:10px 4px;
+    margin-right:24px;
+    font-size:14px;
+    font-weight:500;
+    color:var(--paper-faint);
+    text-decoration:none;
+    border-bottom:2px solid transparent;
+  }
+
+  .nav-link:hover{ color:var(--paper-dim); }
+
+  .nav-link.active{
+    color:var(--paper);
+    border-bottom-color:var(--brass);
+  }
+
+  section.panel{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:24px;
+  }
+
+  .panel-title{
+    font-family:var(--font-serif);
+    font-size:17px;
+    font-weight:600;
+    margin:0;
+  }
+
+  .log-toolbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:16px;
+    gap:12px;
+  }
+
+  .log-toolbar input{
+    max-width:240px;
+    background:var(--ink);
+    border:1px solid var(--border-strong);
+    border-radius:7px;
+    color:var(--paper);
+    font-family:var(--font-mono);
+    font-size:13px;
+    padding:8px 10px;
+    outline:none;
+  }
+
+  .log-toolbar input:focus{ border-color:var(--brass); }
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+  }
+
+  thead th{
+    text-align:left;
+    font-size:12px;
+    font-weight:500;
+    color:var(--paper-faint);
+    padding:8px 10px;
+    border-bottom:1px solid var(--border-strong);
+  }
+
+  tbody td{
+    padding:12px 10px;
+    border-bottom:1px solid var(--border);
+    font-family:var(--font-mono);
+    color:var(--paper);
+    vertical-align:top;
+  }
+
+  tbody tr:hover{ background:var(--surface-raised); }
+
+  .hash-cell{
+    color:var(--paper-dim);
+    max-width:170px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .amount-cell{
+    text-align:right;
+    font-weight:500;
+  }
+
+  .code-pill{
+    display:inline-block;
+    background:var(--success-bg);
+    color:var(--success);
+    border-radius:6px;
+    padding:3px 8px;
+    font-size:12px;
+  }
+
+  .result-pill{
+    display:inline-block;
+    border-radius:6px;
+    padding:3px 8px;
+    font-size:12px;
+  }
+
+  .result-success{
+    background:var(--success-bg);
+    color:var(--success);
+  }
+
+  .result-reject, .result-cancelled{
+    background:var(--danger-bg);
+    color:var(--danger);
+  }
+
+  .result-expired{
+    background:#2A2416;
+    color:#D9B76C;
+  }
+
+  .row-num{ color:var(--paper-faint); }
+
+  .empty-state{
+    text-align:center;
+    padding:48px 20px;
+    color:var(--paper-faint);
+  }
+
+  .empty-state p{
+    font-size:14px;
+    margin:0 0 4px;
+  }
+
+  .empty-state .sub{ font-size:13px; }
+
+  .del-btn{
+    background:transparent;
+    border:none;
+    color:var(--paper-faint);
+    padding:4px 8px;
+    font-size:12px;
+    cursor:pointer;
+  }
+
+  .del-btn:hover{
+    color:var(--danger);
+    background:transparent;
+  }
+
+  @media (max-width:640px){
+    .stats{ grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">JVF Platform · internal ops</p>
+    <h1>Transaction log</h1>
+    <p class="subtitle">Every confirmed entry from the input page appears here.</p>
+
+    <div class="stats">
+      <div class="stat">
+        <p class="stat-label">Total entries</p>
+        <p class="stat-value" id="statCount">0</p>
+      </div>
+      <div class="stat">
+        <p class="stat-label">Total amount</p>
+        <p class="stat-value" id="statAmount">0.00 USDT</p>
+      </div>
+      <div class="stat">
+        <p class="stat-label">Last entry</p>
+        <p class="stat-value" id="statLast">—</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="nav-pages">
+    <a class="nav-link" href="/input">Input</a>
+    <a class="nav-link active" href="/logs" aria-current="page">Log</a>
+  </div>
+
+  <section class="panel">
+    <div class="log-toolbar">
+      <p class="panel-title">Log</p>
+      <input type="text" id="searchBox" aria-label="Search transaction log" placeholder="Search hash, approval code, or result">
+    </div>
+
+    <table id="logTable">
+      <thead>
+        <tr>
+          <th style="width:36px;">#</th>
+          <th>Transaction hash</th>
+          <th>Date and time</th>
+          <th>Approval code</th>
+          <th style="text-align:right;">Amount</th>
+          <th>Results</th>
+          <th style="width:40px;"></th>
+        </tr>
+      </thead>
+      <tbody id="logBody"></tbody>
+    </table>
+
+    <div class="empty-state" id="emptyState">
+      <p>No entries yet.</p>
+      <p class="sub">Confirm a transaction on the Input page to see it here.</p>
+    </div>
+  </section>
+</div>
+
+<script>
+let entries = [];
+const STORAGE_KEY = 'jvf-txn-log-entries';
+
+function fmtAmount(n){
+  return Number(n).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' USDT';
+}
+
+function fmtDate(iso){
+  const d = new Date(iso);
+  if(isNaN(d)) return iso;
+  return d.toLocaleString('en-PH', {year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+}
+
+function escapeHtml(value){
+  return String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+}
+
+async function loadEntries(){
+  try{
+    entries = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  }catch(e){
+    entries = [];
+  }
+  render();
+}
+
+async function persist(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+  }catch(e){
+    console.error('Storage error', e);
+  }
+}
+
+async function deleteEntry(id){
+  entries = entries.filter(e => e.id !== id);
+  await persist();
+  render();
+}
+
+function render(){
+  const search = document.getElementById('searchBox').value.trim().toLowerCase();
+  const filtered = search
+    ? entries.filter(e => e.hash.toLowerCase().includes(search) || e.code.toLowerCase().includes(search) || (e.results||'').toLowerCase().includes(search))
+    : entries;
+
+  const body = document.getElementById('logBody');
+  const empty = document.getElementById('emptyState');
+  const table = document.getElementById('logTable');
+
+  body.innerHTML = '';
+
+  if(filtered.length === 0){
+    table.style.display = 'none';
+    empty.style.display = 'block';
+  } else {
+    table.style.display = 'table';
+    empty.style.display = 'none';
+
+    filtered.forEach((e, i) => {
+      const tr = document.createElement('tr');
+      const resultClass = 'result-' + (e.results || '').toLowerCase();
+      const hash = escapeHtml(e.hash || '');
+      const code = escapeHtml(e.code || '');
+      const results = escapeHtml(e.results || '—');
+      tr.innerHTML = `
+        <td class="row-num">${filtered.length - i}</td>
+        <td class="hash-cell" title="${hash}">${hash}</td>
+        <td>${fmtDate(e.date)}</td>
+        <td><span class="code-pill">${code}</span></td>
+        <td class="amount-cell">${fmtAmount(e.amount)}</td>
+        <td><span class="result-pill ${resultClass}">${results}</span></td>
+        <td><button class="del-btn" data-id="${e.id}" aria-label="Delete entry">&times;</button></td>
+      `;
+      body.appendChild(tr);
+    });
+
+    body.querySelectorAll('.del-btn').forEach(btn=>{
+      btn.addEventListener('click', () => deleteEntry(Number(btn.dataset.id)));
+    });
+  }
+
+  document.getElementById('statCount').textContent = entries.length;
+  document.getElementById('statAmount').textContent = fmtAmount(entries.reduce((s,e)=>s+e.amount,0));
+  document.getElementById('statLast').textContent = entries.length ? fmtDate(entries[0].date) : '—';
+}
+
+document.getElementById('searchBox').addEventListener('input', render);
+
+loadEntries();
+</script>
+
+</body>
+</html>
