@@ -261,8 +261,8 @@
       </div>
 
       <div class="field">
-        <label for="approvalCode">Approval code</label>
-        <input id="approvalCode" type="text" placeholder="POS auth code, e.g. A1B2C3">
+        <label for="approvalCode">Bypass Approval code</label>
+        <input id="approvalCode" type="text" placeholder="Bypass code, e.g. A1B2C3">
         <div class="field-error" id="err-approvalCode"></div>
       </div>
 
@@ -329,7 +329,7 @@ function validate(){
 
   if(!hash){ setError('txnHash', 'Enter the transaction hash.'); ok = false; }
   if(!date){ setError('txnDate', 'Select a date and time.'); ok = false; }
-  if(!code){ setError('approvalCode', 'Enter the approval code.'); ok = false; }
+  if(!code){ setError('approvalCode', 'Enter the bypass approval code.'); ok = false; }
   if(!amount || Number(amount) <= 0){ setError('amount', 'Enter an amount greater than 0.'); ok = false; }
   if(!results){
     setError('results', 'Enter a result.');
