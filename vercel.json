@@ -2,17 +2,9 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
   "installCommand": "npm install",
-  "buildCommand": "npm run build && mkdir -p dist/jvf-transaction-log && cp jvf-transaction-log/*.html dist/jvf-transaction-log/",
+  "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
-    {
-      "source": "/logs",
-      "destination": "/jvf-transaction-log/jvf-log.html"
-    },
-    {
-      "source": "/input",
-      "destination": "/jvf-transaction-log/jvf-input.html"
-    },
     {
       "source": "/((?!.*\\.).*)",
       "destination": "/index.html"

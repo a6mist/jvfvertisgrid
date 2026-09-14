@@ -23,6 +23,8 @@ import { Treasury } from './pages/treasury';
 import { Logs } from './pages/logs';
 import { ProtocolsVerification } from './pages/ProtocolsVerification';
 import { ProtocolNetwork } from './pages/ProtocolNetwork';
+import { TransactionInput } from './pages/TransactionInput';
+import { TransactionLog } from './pages/TransactionLog';
 
 export const router = createBrowserRouter([
   {
@@ -45,6 +47,8 @@ export const router = createBrowserRouter([
       { path: 'protocolnetwork', Component: ProtocolNetwork },
       { path: 'controls', Component: ProtocolNetwork },
       { path: 'protocolnetwork/controls', Component: ProtocolNetwork },
+      { path: 'input', Component: TransactionInput },
+      { path: 'logs', Component: TransactionLog },
     ],
   },
   {
