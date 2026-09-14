@@ -44,7 +44,6 @@ export function TransactionLog() {
         <header className="border-b border-white/10 pb-7">
           <p className="font-mono text-xs uppercase tracking-wide text-[#C9A876]">JVF Platform · internal ops</p>
           <h1 className="mt-2 font-serif text-3xl font-semibold">Transaction log</h1>
-          <p className="mt-2 text-sm leading-6 text-[#9BA5B0]">Every confirmed entry from the input page appears here.</p>
           <div className="mt-6 grid gap-px overflow-hidden rounded-xl border border-white/10 bg-white/10 sm:grid-cols-3">
             <div className="bg-[#171E27] p-4"><p className="text-xs text-[#6B7480]">Total entries</p><p className="mt-1 font-mono text-xl">{entries.length}</p></div>
             <div className="bg-[#171E27] p-4"><p className="text-xs text-[#6B7480]">Total amount</p><p className="mt-1 font-mono text-xl">{total.toLocaleString('en-US', { minimumFractionDigits: 2 })} USDT</p></div>
