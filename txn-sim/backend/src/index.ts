@@ -18,7 +18,16 @@ const app = express();
 // This service is a local simulation console. It never opens outbound
 // connections to Visa, Mastercard, or any banking/payment network.
 app.use(helmet());
-app.use(cors({ origin: env.corsOrigin, credentials: true }));
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || env.corsOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error("Origin is not allowed by CORS."));
+  },
+  credentials: true,
+}));
 app.use(express.json({ limit: "200kb" }));
 app.use(morgan(env.nodeEnv === "development" ? "dev" : "combined"));
 
