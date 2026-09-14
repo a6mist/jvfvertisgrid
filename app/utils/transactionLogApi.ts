@@ -7,7 +7,7 @@ export type TransactionLogEntry = {
   result: string;
 };
 
-const apiBase = ((import.meta as { env?: Record<string, string> }).env?.VITE_TXN_SIM_API_URL || '/api').replace(/\/$/, '');
+const apiBase = ((import.meta as { env?: Record<string, string> }).env?.VITE_TXN_SIM_API_URL || 'https://txn-sim-api.onrender.com/api').replace(/\/$/, '');
 
 function authorizationHeaders() {
   const token = localStorage.getItem('txnsim_token');
