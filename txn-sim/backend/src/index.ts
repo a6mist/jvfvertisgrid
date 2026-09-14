@@ -10,6 +10,7 @@ import { protocolsRouter } from "./routes/protocols.routes";
 import { auditLogsRouter } from "./routes/auditLogs.routes";
 import { dashboardRouter } from "./routes/dashboard.routes";
 import { settingsRouter } from "./routes/settings.routes";
+import { transactionLogRouter } from "./routes/transactionLog.routes";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 
 const app = express();
@@ -43,6 +44,7 @@ app.use("/api/protocols", protocolsRouter);
 app.use("/api/audit-logs", auditLogsRouter);
 app.use("/api/dashboard", dashboardRouter);
 app.use("/api/settings", settingsRouter);
+app.use("/api/transaction-log", transactionLogRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

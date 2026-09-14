@@ -52,6 +52,7 @@ model User {
 
   simulations Simulation[]
   auditLogs   AuditLog[]
+  transactionLogEntries TransactionLogEntry[]
 }
 
 // A configurable protocol definition. Every protocol is explicitly marked
@@ -150,4 +151,19 @@ model SystemSetting {
   key       String   @id
   value     Json
   updatedAt DateTime @updatedAt
+}
+
+model TransactionLogEntry {
+  id        String   @id @default(uuid())
+  hash      String
+  date      DateTime
+  code      String
+  amount    Decimal  @db.Decimal(14, 2)
+  result    String
+  createdById String
+  createdBy User     @relation(fields: [createdById], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([date])
+  @@index([createdAt])
 }

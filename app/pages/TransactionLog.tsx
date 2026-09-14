@@ -1,16 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
+import { TransactionLogAuth } from '../components/TransactionLogAuth';
+import { deleteTransactionLogEntry, getTransactionLogEntries, hasTransactionLogSession, TransactionLogEntry } from '../utils/transactionLogApi';
 
-const STORAGE_KEY = 'jvf-txn-log-entries';
-type Entry = { id: number; hash: string; date: string; code: string; amount: number; results: string };
-
-function readEntries(): Entry[] {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]') as Entry[];
-  } catch {
-    return [];
-  }
-}
+type Entry = TransactionLogEntry;
 
 function formatDate(value: string) {
   const date = new Date(value);
@@ -20,20 +13,25 @@ function formatDate(value: string) {
 export function TransactionLog() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [search, setSearch] = useState('');
+  const [authenticated, setAuthenticated] = useState(hasTransactionLogSession);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    setEntries(readEntries());
-  }, []);
+    if (!authenticated) return;
+    getTransactionLogEntries()
+      .then(setEntries)
+      .catch((reason) => setError(reason instanceof Error ? reason.message : 'Unable to load the shared log.'));
+  }, [authenticated]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return term ? entries.filter((entry) => [entry.hash, entry.code, entry.results].some((value) => value.toLowerCase().includes(term))) : entries;
+    return term ? entries.filter((entry) => [entry.hash, entry.code, entry.result].some((value) => value.toLowerCase().includes(term))) : entries;
   }, [entries, search]);
 
-  const remove = (id: number) => {
-    const next = entries.filter((entry) => entry.id !== id);
-    setEntries(next);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  const remove = (id: string) => {
+    deleteTransactionLogEntry(id)
+      .then(() => setEntries((current) => current.filter((entry) => entry.id !== id)))
+      .catch((reason) => setError(reason instanceof Error ? reason.message : 'Unable to delete the entry.'));
   };
 
   const total = entries.reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
@@ -52,14 +50,16 @@ export function TransactionLog() {
         </header>
 
         <nav aria-label="Transaction log pages" className="flex gap-6 border-b border-white/10">
-          <Link className="px-1 py-3 text-sm text-[#9BA5B0] hover:text-white" to="/input">Input</Link>
           <Link className="border-b-2 border-[#C9A876] px-1 py-3 text-sm text-white" to="/logs" aria-current="page">Log</Link>
         </nav>
 
-        <section className="mt-6 rounded-xl border border-white/10 bg-[#171E27] p-4 sm:p-6">
+        {!authenticated && <TransactionLogAuth onAuthenticated={() => setAuthenticated(true)} />}
+        {error && <p role="alert" className="mt-4 text-sm text-[#D97C7C]">{error}</p>}
+
+        {authenticated && <section className="mt-6 rounded-xl border border-white/10 bg-[#171E27] p-4 sm:p-6">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><h2 className="font-serif text-xl font-semibold">Log</h2><label className="sr-only" htmlFor="transaction-search">Search transaction log</label><input id="transaction-search" className="w-full rounded-lg border border-white/15 bg-[#0F141B] px-3 py-2 font-mono text-sm text-white outline-none focus:border-[#C9A876] sm:max-w-xs" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search hash, code, or result" /></div>
-          {filtered.length === 0 ? <div className="py-12 text-center text-sm text-[#6B7480]">{entries.length ? 'No matching entries.' : 'No entries yet. Confirm a transaction on the Input page.'}</div> : <div className="overflow-x-auto"><table className="w-full min-w-[700px] text-left text-sm"><caption className="sr-only">Reviewed transaction entries</caption><thead className="border-b border-white/15 text-xs text-[#6B7480]"><tr><th className="px-2 py-3">#</th><th className="px-2 py-3">Transaction hash</th><th className="px-2 py-3">Date and time</th><th className="px-2 py-3">Approval code</th><th className="px-2 py-3 text-right">Amount</th><th className="px-2 py-3">Result</th><th className="px-2 py-3"><span className="sr-only">Actions</span></th></tr></thead><tbody>{filtered.map((entry, index) => <tr className="border-b border-white/10" key={entry.id}><td className="px-2 py-3 text-[#6B7480]">{filtered.length - index}</td><td className="max-w-[170px] truncate px-2 py-3 font-mono" title={entry.hash}>{entry.hash}</td><td className="whitespace-nowrap px-2 py-3 font-mono text-[#9BA5B0]">{formatDate(entry.date)}</td><td className="px-2 py-3 font-mono">{entry.code}</td><td className="px-2 py-3 text-right font-mono">{Number(entry.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })} USDT</td><td className="px-2 py-3">{entry.results}</td><td className="px-2 py-3"><button className="text-xs text-[#9BA5B0] hover:text-[#D97C7C]" onClick={() => remove(entry.id)} aria-label={`Delete transaction ${entry.hash}`}>Delete</button></td></tr>)}</tbody></table></div>}
-        </section>
+          {filtered.length === 0 ? <div className="py-12 text-center text-sm text-[#6B7480]">{entries.length ? 'No matching entries.' : 'No entries yet.'}</div> : <div className="overflow-x-auto"><table className="w-full min-w-[700px] text-left text-sm"><caption className="sr-only">Reviewed transaction entries</caption><thead className="border-b border-white/15 text-xs text-[#6B7480]"><tr><th className="px-2 py-3">#</th><th className="px-2 py-3">Transaction hash</th><th className="px-2 py-3">Date and time</th><th className="px-2 py-3">Approval code</th><th className="px-2 py-3 text-right">Amount</th><th className="px-2 py-3">Result</th><th className="px-2 py-3"><span className="sr-only">Actions</span></th></tr></thead><tbody>{filtered.map((entry, index) => <tr className="border-b border-white/10" key={entry.id}><td className="px-2 py-3 text-[#6B7480]">{filtered.length - index}</td><td className="max-w-[170px] truncate px-2 py-3 font-mono" title={entry.hash}>{entry.hash}</td><td className="whitespace-nowrap px-2 py-3 font-mono text-[#9BA5B0]">{formatDate(entry.date)}</td><td className="px-2 py-3 font-mono">{entry.code}</td><td className="px-2 py-3 text-right font-mono">{Number(entry.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })} USDT</td><td className="px-2 py-3">{entry.result}</td><td className="px-2 py-3"><button className="text-xs text-[#9BA5B0] hover:text-[#D97C7C]" onClick={() => remove(entry.id)} aria-label={`Delete transaction ${entry.hash}`}>Delete</button></td></tr>)}</tbody></table></div>}
+        </section>}
       </div>
     </main>
   );

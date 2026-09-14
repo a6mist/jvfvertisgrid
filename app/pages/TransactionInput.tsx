@@ -1,7 +1,8 @@
 import { FormEvent, useState } from 'react';
 import { Link } from 'react-router';
+import { TransactionLogAuth } from '../components/TransactionLogAuth';
+import { createTransactionLogEntry, hasTransactionLogSession } from '../utils/transactionLogApi';
 
-const STORAGE_KEY = 'jvf-txn-log-entries';
 const results = ['Success', 'Reject', 'Expired', 'Cancelled'];
 
 type FormValues = {
@@ -14,18 +15,11 @@ type FormValues = {
 
 const initialValues: FormValues = { hash: '', date: '', code: '', amount: '', result: '' };
 
-function readEntries() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]') as Array<Record<string, unknown>>;
-  } catch {
-    return [];
-  }
-}
-
 export function TransactionInput() {
   const [values, setValues] = useState(initialValues);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
+  const [authenticated, setAuthenticated] = useState(hasTransactionLogSession);
 
   const update = (field: keyof FormValues, value: string) => {
     setValues((current) => ({ ...current, [field]: value }));
@@ -33,7 +27,7 @@ export function TransactionInput() {
     setSaved(false);
   };
 
-  const submit = (event: FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!values.hash || !values.date || !values.code || !values.amount || Number(values.amount) <= 0 || !results.includes(values.result)) {
       setError('Complete every field and choose a valid result.');
@@ -41,16 +35,13 @@ export function TransactionInput() {
     }
 
     try {
-      const entries = readEntries();
-      entries.unshift({
-        id: Date.now(),
+      await createTransactionLogEntry({
         hash: values.hash.trim(),
         date: values.date,
         code: values.code.trim(),
         amount: Number(values.amount),
-        results: values.result,
+        result: values.result,
       });
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
       setValues(initialValues);
       setSaved(true);
     } catch {
@@ -72,7 +63,9 @@ export function TransactionInput() {
           <Link className="px-1 py-3 text-sm text-[#9BA5B0] hover:text-white" to="/logs">Log</Link>
         </nav>
 
-        <section className="mt-6 rounded-xl border border-white/10 bg-[#171E27] p-5 sm:p-6">
+        {!authenticated && <TransactionLogAuth onAuthenticated={() => setAuthenticated(true)} />}
+
+        {authenticated && <section className="mt-6 rounded-xl border border-white/10 bg-[#171E27] p-5 sm:p-6">
           <h2 className="font-serif text-xl font-semibold">New entry</h2>
           <p className="mt-1 text-sm text-[#6B7480]">All fields are required before the entry can be confirmed.</p>
           <form className="mt-6 grid gap-4 sm:grid-cols-2" onSubmit={submit}>
@@ -87,7 +80,7 @@ export function TransactionInput() {
               <button type="submit" className="rounded-lg bg-[#C9A876] px-4 py-2 text-sm font-medium text-[#20180C] hover:opacity-90">Confirm entry</button>
             </div>
           </form>
-        </section>
+        </section>}
       </div>
     </main>
   );

@@ -28,6 +28,14 @@ export const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+export const transactionLogEntrySchema = z.object({
+  hash: z.string().trim().min(1).max(200),
+  date: z.coerce.date(),
+  code: z.string().trim().min(1).max(100),
+  amount: z.number().positive().finite(),
+  result: z.enum(["Success", "Reject", "Expired", "Cancelled"]),
+});
+
 export const errorScenarioEnum = z.enum([
   "INVALID_PROTOCOL",
   "INVALID_AMOUNT",
