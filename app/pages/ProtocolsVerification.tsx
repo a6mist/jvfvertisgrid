@@ -2,7 +2,7 @@ import { FormEvent, ReactNode, useEffect, useState } from 'react';
 
 type Phase = 'idle' | 'creating' | 'running' | 'done';
 type Protocol = { code: string; name: string };
-type Step = { stepName: string; status: string };
+type Step = { stepName: string; status: 'SUCCESS' | 'WARNING' | 'FAILED' | 'SKIPPED' };
 
 const defaultProtocols: Protocol[] = ['101.1', '101.2', '101.3', '101.4', '101.5', '101.6', '201.3'].map((code) => ({ code, name: `Protocol ${code}` }));
 const currencies = ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'PHP', 'SGD'];
@@ -61,7 +61,7 @@ export function ProtocolsVerification() {
       <button type="submit" disabled={phase === 'creating' || phase === 'running'} className="w-full rounded-md bg-teal-400 text-slate-950 font-medium text-sm py-2.5 hover:bg-teal-300 disabled:opacity-60 transition-colors">{phase === 'creating' || phase === 'running' ? 'Confirming...' : 'Confirm'}</button>
     </form></Panel><Panel title="Verification sequence">
       {phase === 'idle' && steps.length === 0 && <div className="text-sm text-white/50 py-8 text-center">Configure a transaction and click Confirm.</div>}
-      {phase !== 'idle' && <div className="space-y-1.5 font-mono text-xs">{steps.map((step, i) => <div key={`${step.stepName}-${i}`} className="flex items-center justify-between border-b border-white/10 py-1.5"><span className="text-white/70">{step.stepName}</span><span className={step.status === 'PASSED' ? 'text-teal-300' : 'text-red-400'}>{step.status}</span></div>)}{phase !== 'done' && <div className="text-white/50 py-1.5 animate-pulse">Processing...</div>}</div>}
+      {phase !== 'idle' && <div className="space-y-1.5 font-mono text-xs">{steps.map((step, i) => <div key={`${step.stepName}-${i}`} className="flex items-center justify-between border-b border-white/10 py-1.5"><span className="text-white/70">{step.stepName}</span><span className={step.status === 'SUCCESS' ? 'text-teal-300' : step.status === 'WARNING' ? 'text-amber-300' : step.status === 'SKIPPED' ? 'text-white/50' : 'text-red-400'}>{step.status}</span></div>)}{phase !== 'done' && <div className="text-white/50 py-1.5 animate-pulse">Processing...</div>}</div>}
       {result && phase === 'done' && <div className="mt-4 border-t border-white/10 pt-4 space-y-2"><div className="text-sm font-semibold">SIMULATION {result.decision ?? (result.overallResult === 'FAILED' ? 'DENIED' : 'APPROVED')}</div><div className="grid grid-cols-2 gap-2 text-xs font-mono text-white/70"><div>Protocol: {result.protocol.code}</div><div>Network: {result.cardNetwork}</div><div>Result: {result.overallResult}</div><div>Duration: {result.processingDurationMs} ms</div><div className="col-span-2">Reference: {result.simulationRefId}</div></div><div className="text-xs text-white/70">Reason: {result.decisionReason ?? 'Local checks completed.'}</div><div className="text-[11px] text-amber-300 pt-1">SIMULATED RESULT - THIS RESULT DOES NOT REPRESENT AUTHORIZATION OR VERIFICATION BY ANY PAYMENT NETWORK.</div></div>}
     </Panel></div>
   </div></div>;
